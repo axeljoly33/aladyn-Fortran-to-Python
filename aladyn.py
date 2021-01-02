@@ -218,7 +218,7 @@ def link_cell_setup():
     km1ZY = 0
 
     if ncell_per_node.gt.ncell_per_node_old:
-        if aladyn_mods.sim_box.id_of_cell is None:
+        if not aladyn_mods.sim_box.id_of_cell:
             aladyn_mods.sim_box.alloc_cells(ierror)  # ! alloc_ates cells in aladyn_mods !
             aladyn_mods.sim_box.error_check(ierror, 'ERROR in alloc_cells...')
 
