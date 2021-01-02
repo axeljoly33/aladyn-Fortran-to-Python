@@ -65,6 +65,7 @@
 # ------------------------------------------------------------------
 #
 
+import os
 import sys
 import operator
 import numpy as np
@@ -84,7 +85,7 @@ import aladyn
 
 def GET_NUM_PROCS():
 
-    GET_NUM_PROCS = OMP_GET_NUM_PROCS()
+    GET_NUM_PROCS = os.cpu_count()  # OMP_GET_NUM_PROCS()
 
     return GET_NUM_PROCS
     # ! end function !
@@ -127,7 +128,7 @@ def GET_WTIME():
 
 def GET_MAX_THREADS():
 
-    GET_MAX_THREADS = OMP_GET_MAX_THREADS()
+    GET_MAX_THREADS = os.cpu_count()  # OMP_GET_MAX_THREADS()
 
     return GET_MAX_THREADS
     # ! end function !
