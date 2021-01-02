@@ -1,0 +1,1876 @@
+#
+# ------------------------------------------------------------------
+# 12-10-2020
+#
+# Artificial Neural Network module for aladyn.f code.
+# Open_MP version.
+# Converted to Python.
+#
+# Yann Abou Jaoude - Axel Joly
+# Ecole Supérieure d'Ingénieurs Léonard-de-Vinci
+# 12 Avenue Léonard de Vinci,
+# Courbevoie, 92400, FRANCE
+# phone: (+33) 01 41 16 70 00
+# fax:
+# e-mail: yann.abou_jaoude@edu.devinci.fr - axel.joly@edu.devinci.fr
+# ------------------------------------------------------------------
+# 04-26-2019
+# 
+# Artificial Neural Network module for aladyn.f code
+# Open_MP version
+# 
+# Vesselin Yamakov
+# National Institute of Aerospace
+# 100 Exploration Way,
+# Hampton, VA 23666 
+# phone: (757)-864-2850
+# fax:   (757)-864-8911
+# e-mail: yamakov@nianet.org
+# ------------------------------------------------------------------
+# Use a trained NN to get pot. param for a specific potential form
+# ------------------------------------------------------------------
+# 
+# Notices:
+# Copyright 2015, 2018, United States Government as represented by the 
+# Administrator of the National Aeronautics and Space Administration. 
+# All Rights Reserved.
+# 
+# Disclaimers:
+# No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY
+# WARRANTY OF ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, 
+# INCLUDING, BUT NOT LIMITED TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE 
+# WILL CONFORM TO SPECIFICATIONS, ANY IMPLIED WARRANTIES OF 
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR FREEDOM FROM 
+# INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR 
+# FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM 
+# TO THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT,IN ANY MANNER, 
+# CONSTITUTE AN ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT 
+# OF ANY RESULTS, RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS 
+# OR ANY OTHER APPLICATIONS RESULTING FROM USE OF THE SUBJECT SOFTWARE. 
+# FURTHER, GOVERNMENT AGENCY DISCLAIMS ALL WARRANTIES AND LIABILITIES 
+# REGARDING THIRD-PARTY SOFTWARE, IF PRESENT IN THE ORIGINAL SOFTWARE,
+# AND DISTRIBUTES IT "AS IS." 
+# 
+# Waiver and Indemnity:
+# RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE UNITED STATES
+# GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY PRIOR 
+# RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY 
+# LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH
+# USE, INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, 
+# RECIPIENT'S USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND
+# HOLD HARMLESS THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND 
+# SUBCONTRACTORS, AS WELL AS ANY PRIOR RECIPIENT, TO THE EXTENT
+# PERMITTED BY LAW. RECIPIENT'S SOLE REMEDY FOR ANY SUCH MATTER SHALL 
+# BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS AGREEMENT.
+# 
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 
+
+import sys
+import operator
+import numpy as np
+import random
+import torch
+import math
+import aladyn_sys
+import aladyn_mods
+import aladyn_MD
+import aladyn_IO
+import aladyn
+
+
+#
+# ------------------------------------------------------------------
+#
+
+# uMODULE ANN
+
+# u	  use sys_OMP #sys NO OMP / sys /sys ACC/sys omp
+# u	  use constants
+# u	  use sim_box
+# u	  use pot_module
+# u	  save
+
+Max_net_layers = 8      # integer, parameter
+n_set_ann = -1          # integer
+net_atom_types = -1     # integer
+iflag_ann = -1          # integer
+net_layers = -1         # integer
+net_in = -1             # integer
+net_out = -1            # integer
+mG_dim = -1             # integer
+max_tri_index = -1      # integer
+
+net_layers = -1         # integer
+net_in = -1             # integer
+net_out = -1            # integer
+mG_dim = -1             # integer
+max_tri_index = -1      # integer
+
+Rc_ann = -2.0           # double
+d_ann = -2.0            # double
+d4_ann = -2.0           # double
+Gauss_ann = -2.0        # double
+range_min_ann = -2.0    # double
+ActFunc_shift = -2.0    # double
+
+Nodes_of_layer = []     # 1 dim, int LNS a l'origine un entier
+
+r0_value = []           # 1 dim , double
+r0G_value = []          # 1 dim , double
+
+Gi_atom = []            # 3 dim , double
+dG_i = []               # 3 dim , double
+
+Gi_list = []            # 2 dim , double
+Gi_new = []             # 2 dim , double
+
+U0 = []                 # 1 dim , double
+U1 = []                 # 1 dim , double
+U2 = []                 # 1 dim , double
+
+W1_ann = []             # 2 dim , double
+W3_ann = []             # 2 dim , double
+W2_ann = []             # 3 dim , double
+
+B1_ann = []             # 1 dim , double
+B3_ann = []             # 1 dim , double
+B2_ann = []             # 2 dim , double
+
+dBOP_param_dxij = []    # 4 dim , double
+
+buf_ann = []            # 1 dim , double
+
+r0Rc = []               # 1 dim , double
+r0pRc = []              # 1 dim , double
+U1f1 = []               # 1 dim , double
+U2f1 = []               # 1 dim , double
+U1f2 = []               # 1 dim , double
+U2f2 = []               # 1 dim , double
+U1f3 = []               # 1 dim , double
+U2f3 = []               # 1 dim , double
+Gi_dev = []             # 2 dim , double
+xr_ij0 = []             # 2 dim , double
+xr_ij1 = []             # 2 dim , double
+xr_ij2 = []             # 2 dim , double
+xr_ij3 = []             # 2 dim , double
+xr_ij_dev = []          # 3 dim , double
+fsij_dev = []           # 3 dim , double
+dfuN_dev = []           # 3 dim , double
+Gi_3D_dev1 = []         # 3 dim , double
+Gi_3D_dev2 = []         # 3 dim , double
+Gi_3D_dev3 = []         # 3 dim , double
+dfs_rij_3D1 = []        # 3 dim , double
+dfs_rij_3D2 = []        # 3 dim , double
+dfs_rij_3D3 = []        # 3 dim , double
+dfs_rij_3D = []         # 4 dim , double
+Gi_3D_dev = []          # 4 dim , double
+dBOP_param_dxij_ = []   # 4 dim , double
+
+"""
+! --- TEST arrays ---
+!	 double precision, dimension(:,:), allocatable :: Gi_cp
+"""
+# u	  CONTAINS
+"""
+!--------------------------------------------------------------------
+! This subroutine reads in data from files set in pot.dat file 
+! describing a trained Neural Network for a specific potential format
+! ipot_type = iPOT_func_type = 100:straight ANN; 106: BOP ANN;
+!
+! FORMAT:
+! iflag_ann,range_min_ann,Rc_ann,d_ann,Gauss_ann
+! n_set_ann, (r0_value(i), i=1,n_set_ann)
+! w1(1,1), w1(1,2),…w1(1,20), w1(2,1),w1(2,2),…w1(60,20)
+! b1(1), b1(2),…b1(20)
+! w2(1,1), w2(1,2),…w2(1,20), w2(2,1),w2(2,2),…w2(20,20)
+! b2(1), b2(2),…b2(20)
+! w3(1,1), w3(2,1), w3(3,1),…w3(20,1)
+! b3(1)
+!--------------------------------------------------------------------
+"""
+
+
+def input_pot_ANN(ipot_type, ierror):
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    ipot_type = -1  # integer, intent(in)
+    ierror_type = -1  # integer, intent(out)
+    ierr = -1  # integer
+    WT_ann = []  # 2 dim , double
+
+    LINE = ""  # character*200
+    elem_symb_pot = []  # character*4 elem_symb_pot(112) ! maximum numb. elements possible !
+    gram_mol_pot = []  # double precision gram_mol_pot(112)
+
+    ierr = 0
+    net_in = 0
+    net_out = 0
+    net_atom_types = 1
+
+    Nodes_of_layer = []  # etrange, Nodes_of_layer est une variable global a priorie entiere
+    # on va considerer que c'est un tableau d'entier
+    nunit = 40  # ! ANN file !
+
+    err_msg = ' '  # character*200
+    ierror = 0
+
+    nunit = open(filename[1], "r")  # open (nunit,file=filename(1),status='old')
+
+    print(' ')
+    print(' READING pot file: ' + filename[1] + '...')  # ./ANN.DAT
+
+    """
+    ! *** Start reading the Artificial Neural Network file *.ann ***
+    """
+    LINE = nunit.readline()  # ! 1st Line ! read(nunit,fmt=50,IOSTAT=ierr)
+
+    iPOT_file_ver = LINE[1]  # LINE =" 0 version number"
+    """
+    !	 write(6,*)' ANN version:',iPOT_file_ver
+    """
+
+    LINE = nunit.readline()  # LINE  ! 2nd Line !
+    net_atom_types = LINE[1]  # LINE = " 1 - number of chemical species in the system"  ! number of chemical elem. !
+
+    # -
+    elem_symb_pot.append('')  # first empty pos
+    gram_mol_pot.append('0.0')  # first empty pos
+
+    for i in range(1, net_atom_types + 1):
+        print("debug")
+        myLine = nunit.readline()  # 'Al'  26.982 - element symbol and weight
+        myData = myLine.split()
+        myData[0] = myData[0].split('\'')[1]
+
+        elem_symb_pot.append(myData[0])  # 'Al'
+        gram_mol_pot.append(float(myData[1]))  # '26.982'
+
+    print(' ')
+    print('Elements in ANN potential file:')
+    print(elem_symb_pot + '' + net_atom_types)
+
+    for i in range(1, iatom_types + 1):  # ! element from pot.dat file !
+        ierror = 1  # ! assume element not found  !
+        for n in range(1, net_atom_types + 1):  # ! element from lammps pot file !
+            nelem = numb_elem_Z(elem_symb_pot[n])
+            if nelem == ielement[i]:
+                ipot[n] = i  # ! so that ielement(ipot(n)) = ielement(i) !
+                ierror = 0
+        if (ierror != 0):
+            print(elem_symb[i] + '' + filename[1])
+    print(' ')
+
+    err_msg = 'ERROR elements in ANN pot file do not match' + 1 + ' those in the pot.dat file!'  # LNS
+    print(err_msg)
+
+    error_check(ierror, err_msg)
+
+    if mynod == 0:
+
+        LINE = nunit.readline()  # 0 0.100000 6.000000 1.500000 1.000000 1 ! 1st NN-data Line !
+        myData = LINE.split()
+        iflag_ann = int(myData[0])
+        range_min_ann = float(myData[1])
+        Rc_ann = float(myData[2])
+        d_ann = float(myData[3])
+        Gauss_ann = float(myData[4])
+        # 1 is missing?
+        # format(A)
+
+        LINE = nunit.readline()  # ! 2nd NN-data Line !
+        # 12 2.00 2.20 2.40 2.60 2.80 3.00 3.40 3.80 4.20 4.60 5.00 5.40
+        myData = LINE.split()
+
+        if ierr == 0:
+            n_set_ann = int(myData[0])
+            if n_set_ann > 0:
+
+                r0_value.append(0.0)  # first empty pos
+                if ierr == 0:
+                    print("debug")
+                    for i in range(1, n_set_ann + 1):  # la pos 0 du tableau est vide
+                        r0_value.append(float(myData[i]))  # mydata 0 correspond a autre chose.
+
+            else:
+                ierr = 1;
+                print('ERROR: No Gaussian positions in line 2 in ' + filename(1))
+            if ierr == 0:
+                print(n_set_ann + ' ' + r0_value)
+
+        LINE = nunit.readline()  # ! 3rd NN-data Line !
+
+        if ierr == 0:
+            myData = LINE.split()  # 4 60 20 20 1
+            net_layers = int(myData[0])
+            if (0 < net_layers) and (net_layers <= Max_net_layers):
+
+                Nodes_of_layer.append(0)  # first empty pos
+                for i in range(1, net_layers + 1):
+                    Nodes_of_layer.append(int(myData[i]))
+
+                net_in = Nodes_of_layer[1]
+                net_out = Nodes_of_layer[net_layers]
+                net_in_check = 5 * n_set_ann * iatom_types
+                if net_in != net_in_check:
+                    ierr = 1
+                    print(net_in + ' ' + net_in_check + ' ' + n_set_ann + ' ' + iatom_types)
+            else:
+                ierr = 1
+                print('ERROR: Incorect Net layers in line 3 in ' + filename(1))
+                print(net_layers + ' ' + Max_net_layers)
+                print('Number of Net layers = ' + i3 + ' must be between 1 and ' + i2)
+
+            if ierr == 0:
+                print(net_layers + ' ' + Nodes_of_layer)
+                """
+                !	 write(6,20) net_atom_types, net_in, net_out, Rc_ann, d_ann
+                """
+    error_check(ierr, 'ERROR reading ANN file in input_pot_ANN')
+    error_check(net_atom_types - iatom_types, 'ERROR: Elements in ANN file and pot.dat do not match!')
+
+    if iPOT_file_ver == 0 or iPOT_file_ver == 1:
+        ActFunc_shift = 0.0  # ! f(x) = 1/(1+exp(-x)) !
+    elif iPOT_file_ver == 2:
+        ActFunc_shift = -0.5  # ! f(x) = 1/(1+exp(-x)) - 0.5 !
+    else:
+        ActFunc_shift = 0.0  # ! f(x) = 1/(1+exp(-x)) !
+
+    r0G_value.append(0.0)
+    for i in range(1, n_set_ann + 1):
+        # r0G_value(:) = r0_value(:)/Gauss_ann
+        r0G_value.append(r0_value[i] / Gauss_ann)
+
+    error_check(ierr, 'ERROR allocate r0G_value in input_pot_ANN')
+
+    alloc_types_ANN(ierr)
+    error_check(ierr, 'ERROR alloc_types_ANN in input_pot_ANN')
+
+    ierr = 0
+    ww = 0.0
+    bb = 0.0
+
+    """
+    ! --- Read Input Layer Parameters for atom of type itype ---
+    """
+    Ncolumns = Nodes_of_layer[1]  # ! 60 !
+    Nraws = Nodes_of_layer[2]  # ! 20 !
+    W1_ann.append([])  # first empty pos
+    for icol in range(1, Ncolumns + 1):  # ! 1.. 60 !
+        W1_ann.append([])
+        W1_ann[icol].append(0.0)  # first empty pos
+        for iraw in range(1, Nraws + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
+
+            LINE = nunit.readline()  # ! ANN Line ! 7-1206
+            myData = LINE.split()  # 4.07328794e-01  0.0000
+
+            if ierr == 0:
+                print("debug159")
+                W1_ann[icol].append(float(myData[0]))
+                # a quoi ça sert ça? c'est toujours 0.0
+                dumb = float(myData[1])
+
+    B1_ann.append(0.0)  # first empty pos
+    for iraw in range(1, Nraws + 1):
+
+        LINE = nunit.readline()  # ! ANN Line !1207-1226
+        myData = LINE.split()
+        if ierr == 0:
+            print("debug160")
+            B1_ann.append(float(myData[0]))
+            # a quoi ça sert ça? c'est toujours 0.0
+            dumb = float(myData[1])
+
+    """
+     --- Read Hidden Layers Parameters for atom of type itype ---
+    """
+    # au vu de la complexité de la forme de ce tableau, pour le moment on va le surdimentionné
+    for i1 in range(0, max(Nodes_of_layer) + 1):
+        W2_ann.append([])
+        for i2 in range(0, max(Nodes_of_layer) + 1):
+            W2_ann[i1].append([])
+            for i3 in range(0, net_layers - 2 + 1):
+                W2_ann[i1][i2].append(0.0)
+    for i1 in range(0, max(Nodes_of_layer) + 1):
+        B2_ann.append([])
+        for i2 in range(0, net_layers - 2 + 1):
+            B2_ann[i1].append(0.0)
+
+    for layer in range(2, net_layers - 2 + 1):  # ! 4-2+1 !
+        Ncolumns = Nodes_of_layer[layer]  # ! 20 !
+        Nraws = Nodes_of_layer[layer + 1]  # !  8 !
+
+        for icol in range(1, Ncolumns + 1):  # ! 1.. 20 !
+            for iraw in range(1, Nraws + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
+                LINE = nunit.readline()  # ! ANN Line !1227-1386
+                if ierr == 0:
+                    print("debug161")
+                    myData = LINE.split()
+                    ww = float(myData[0])
+                W2_ann[icol][iraw][layer] = ww
+
+        for iraw in range(1, Nraws + 1):
+
+            LINE = nunit.readline()  # ! ANN Line !1387 - 1394
+            if ierr == 0:
+                myData = LINE.split()
+                bb = float(myData[0])
+            B2_ann[iraw][layer] = bb
+
+    """
+    ! --- Read Output Layer Parameters for atom of type itype ---
+    """
+    Ncolumns = Nodes_of_layer[net_layers - 1]  # ! 20 !
+    Nraws = Nodes_of_layer[net_layers]  # !  8 !
+    W3_ann.append([])  # first empty pos
+    for icol in range(1, Ncolumns + 1):
+        W3_ann.append([])
+        W3_ann[icol].append(0.0)  # first empty pos
+        for iraw in range(1, Nraws + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
+
+            LINE = nunit.readline()  # ! ANN Line ! 1395 - 1554
+            myData = LINE.split()
+
+            if ierr == 0:
+                print("debug162")
+                W3_ann[icol].append(float(myData[0]))
+                # a quoi ça sert ça? c'est toujours 0.0
+                dumb = float(myData[1])
+
+    B3_ann.append(0.0)  # first empty pos
+    for iraw in range(1, Nraws + 1):
+        LINE = nunit.readline()  # ! ANN Line ! 1555 - 1562
+        myData = LINE.split()
+        if ierr == 0:
+            print("debug163")
+            B3_ann.append(float(myData[0]))
+            # a quoi ça sert ça? c'est toujours 0.0
+            dumb = float(myData[1])
+
+    nunit.close()
+
+    error_check(ierr, 'ERROR reading W_ann and B_ann arrays')
+
+    """
+    ! Swap index order from (n_set,l,...) to (l,n_set,...) of
+    ! the FIRST layer weights - FORTRAN order.
+    """
+    Ncolumns = Nodes_of_layer[1]  # ! 60 !
+    Nraws = Nodes_of_layer[2]  # ! 16 !
+
+    for i in range(Ncolumns + 1):
+        WT_ann.append([])
+        for j in range(Nraws + 1):
+            WT_ann[i].append(0.0)
+
+    # WT_ann(:,:) = W1_ann(:,:) # ces tableaux ont la meme dimension
+    for i in range(len(W1_ann)):
+        for j in range(len(W1_ann[i])):
+            WT_ann[i][j] = W1_ann[i][j]
+
+    for l in range(0, 4 + 1):
+        for n_set in range(1, n_set_ann + 1):
+            ind = l * n_set_ann + n_set
+            icol = (n_set - 1) * 5 + l + 1
+            if (icol == 0 or ind == 0):
+                print("error: icol et ind ne devrait pas etre egale a 0 ANN ligne 460")
+
+            for i in range(len(W1_ann[icol])):
+                # W1_ann(icol,:) = WT_ann(ind,:)
+                W1_ann[icol][i] = WT_ann[ind][i]
+
+    WT_ann = []
+    ierror = ierr  # surement inutile.
+
+
+# f  format('Gaussian positions:',i3,':',32f6.2)
+# f  format('NN layers=:',i3,' of nodes:',10i5)
+# f   format(/,
+# f 'ERROR: Inconsistency b/n the number of input net nodes:',i4,
+# f ' and Structure Parameters:',i4,' = 5 *',i4,' * ',i2)
+# f  format(/,'ERROR: Element ',A2,' from pot.dat not in ',A,/)
+# f  format('Atom types in neural net:',i2,/,
+# f 'Structure parameters (net_in) :',i4,/,
+# f 'Potential parameters (net_out):',i4,/,
+# f 'Rc (R_cut-off) =',f8.4,',  d (in Fcut) =',f8.4,/)
+
+"""
+!--------------------------------------------------------------------
+! Called from calc_pot_param() in aladyn.f
+!--------------------------------------------------------------------
+"""
+
+
+def init_param_ANN():
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    """
+    ! Get the maximum cut-off distance, r_cut_off and r2_cut_off !
+    ! and the maximum overlapping distance, rin 
+    """
+    r_cut_off = 0.0
+
+    mG_dim = (iatom_types * (iatom_types + 1) * n_set_ann * 5) / 2
+    max_tri_index = (iatom_types * (iatom_types + 1)) / 2  # ! Upper triang. !
+
+    if mG_dim != Nodes_of_layer[1]:
+        error_check(1, 'ERROR dim. of Gis not equal to Nodes_of_layer(1)...')
+
+    d4_ann = d_ann ** 4  # puissance 4
+    r_cut_off = Rc_ann
+    r_max_pot = r_cut_off + 1.0  # ! Add additional 1 Ang to pot array for consistency with tabulated potentials!
+    rindr = 0.5  # ! [Ang] !
+
+
+"""
+! ---------------------------------------------------------------------
+! Calculates Analytical derivatives and force calculation.
+! ---------------------------------------------------------------------
+"""
+
+
+def Frc_ANN_OMP(ecohe):
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    # u use atoms
+
+    dgij1 = -2.0  # double
+    dgij2 = -2.0  # double
+    dgij3 = -2.0  # double
+    U_x1 = -2.0  # double
+    U_x2 = -2.0  # double
+    U_x3 = -2.0  # double
+    Gi_sum_01 = -2.0  # double
+    Gi_sum_11 = -2.0  # double
+    Gi_sum_21 = -2.0  # double
+    Gi_sum_31 = -2.0  # double
+    Gi_sum_41 = -2.0  # double
+    Gi_sum_02 = -2.0  # double
+    Gi_sum_12 = -2.0  # double
+    Gi_sum_22 = -2.0  # double
+    Gi_sum_32 = -2.0  # double
+    Gi_sum_42 = -2.0  # double
+    Gi_sum_03 = -2.0  # double
+    Gi_sum_13 = -2.0  # double
+    Gi_sum_23 = -2.0  # double
+    Gi_sum_33 = -2.0  # double
+    Gi_sum_43 = -2.0  # double
+    fij = [0] * 4  # double , dim 1, taille 3
+    fr = [0] * 10  # double , dim 1, taille 9 but why 9??? 3 suffirait
+    dcos_ijk = [0] * 4  # double , dim 1, taille 3
+
+    if ihalt != 0:
+        return
+
+    if ireport > 0:
+        print(mG_dim + ' ' + n_set_ann + ' ' + max_nbrs)
+    # f  format('Frc_ANN_OMP(mG_dim=',i3,' n_set_ann=',i3,1 ' max_nbrs=',i3,')')
+
+    ecohe = 0.0
+    Rc = Rc_ann
+    Rc2 = Rc_ann ** 2
+    d4 = d4_ann
+    Sigma2 = 2.0 * Gauss_ann ** 2
+    r0Rc = []
+    r0pRc = []
+    for i in range(len(r0_value)):  # len = n_set_ann+1 normalement
+        # r0Rc(:) = Rc_ann*r0_value(:)
+        # r0pRc(:) = Rc_ann + r0_value(:)
+        r0Rc.append(Rc_ann * r0_value[i])
+        r0pRc.append(Rc_ann * r0_value[i])
+
+    h11 = h(1, 1)
+    h12 = h(1, 2)
+    h13 = h(1, 3)
+    h22 = h(2, 2)
+    h23 = h(2, 3)
+    h33 = h(3, 3)
+
+    """
+    ! --- Start I loop over ni atoms ---
+    """
+    if ireport > 0:
+        cpu_time(cpu_start)
+
+    for ni in range(1, natoms + 1):  # ! loop over atoms !
+        sxn = sx[ni]
+        syn = sy[ni]
+        szn = sz[ni]
+
+        for nb1 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+
+            nj = nbr_list[nb1, ni]
+            ij_delta = 1 - min([abs(nj - ni), 1])  # ! 1 if ni=nj; 0 if ni=/=nj !
+
+            sx0 = sx[nj] - sxn  # round etait dnint
+            sx0 = sx0 - round(sx0)  # ! make periodic along X !
+            sy0 = sy[nj] - syn
+            sy0 = sy0 - round(sy0)  # ! make periodic along Y !
+            sz0 = sz[nj] - szn
+            sz0 = sz0 - round(sz0)  # ! make periodic along Z !
+
+            xij = h11 * sx0 + h12 * sy0 + h13 * sz0
+            yij = h22 * sy0 + h23 * sz0
+            zij = h33 * sz0
+            r2ij = xij ** 2 + yij ** 2 + zij ** 2 + ij_delta * Rc2  # ! rij+Rc when i=j
+            rij = r2ij ** (1 / 2)
+            r1ij = 1 / rij
+
+            xr_ij0[nb1][ni] = rij
+            xr_ij1[nb1][ni] = xij * r1ij
+            xr_ij2[nb1][ni] = yij * r1ij
+            xr_ij3[nb1][ni] = zij * r1ij
+
+            RcRij = max([Rc - rij, 0])
+            RcRij3 = RcRij ** 3
+            RcRij4 = RcRij3 * RcRij
+            RcRij5 = RcRij4 * RcRij
+            fc_rij = 0.25 * RcRij4 / (d4 + RcRij4)
+            denominator = (Gauss_ann * (d4 + RcRij4)) ** 2
+
+            for n_set in range(1, n_set_ann + 1):
+                r0 = r0_value[n_set]  # ! do not use r0G_value() here !
+                RijRo = rij - r0
+                expRijRo = math.exp(-(RijRo / Gauss_ann) ** 2)
+                fsij_dev[nb1][n_set][ni] = fc_rij * expRijRo
+                dfsij = (r0Rc[n_set] + rij * (rij - r0pRc[n_set]) - Sigma2) * d4 - RijRo * RcRij5
+                dfsij = 0.50 * dfsij * RcRij3 * expRijRo / denominator  # ! *2/4 !
+                dfs_rij_3D1[n_set][nb1][ni] = dfsij * xr_ij1[nb1][ni]  # ! dfs_ij*xij/rij !
+                dfs_rij_3D2[n_set][nb1][ni] = dfsij * xr_ij2[nb1][ni]  # ! dfs_ij*xij/rij !
+                dfs_rij_3D3[n_set][nb1][ni] = dfsij * xr_ij3[nb1][ni]  # ! dfs_ij*xij/rij !
+
+    """
+    ! --- Start II loop over ni atoms ---
+    """
+
+    for ni in range(1, natoms + 1):  # ! loop over atoms !
+
+        for n_set in range(1, n_set_ann + 1):
+
+            Gi_sum0 = 0.0
+            Gi_sum1 = 0.0
+            Gi_sum2 = 0.0
+            Gi_sum3 = 0.0
+            Gi_sum4 = 0.0
+
+            for nb1 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+
+                for nb2 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+                    fsij_fsik = fsij_dev[nb1][n_set][ni] * fsij_dev[nb2][n_set][ni]
+
+                    cos_ijk = xr_ij1[nb1][ni] * xr_ij1[nb2][ni] + xr_ij2[nb1][ni] * xr_ij2[nb2][ni] + xr_ij3[nb1][ni] * \
+                              xr_ij3[nb2][ni]
+                    cos2_ijk = cos_ijk ** 2
+                    Pl2 = 1.5 * cos2_ijk - 0.50
+                    Pl4 = (4.375 * cos2_ijk - 3.750) * cos2_ijk + 0.375
+                    pl6 = ((14.4375 * cos2_ijk - 19.6875) * cos2_ijk + 6.5625) * cos2_ijk - 0.3125
+
+                    Gi_sum0 = Gi_sum0 + fsij_fsik
+                    Gi_sum1 = Gi_sum1 + cos_ijk * fsij_fsik
+                    Gi_sum2 = Gi_sum2 + Pl2 * fsij_fsik
+                    Gi_sum3 = Gi_sum3 + Pl4 * fsij_fsik
+                    Gi_sum4 = Gi_sum4 + Pl6 * fsij_fsik
+            """
+            ! Calc. global G-vector !
+            """
+            ind_set = n_set * 5 - 4
+            Gi_dev[ind_set, ni] = Gi_sum0
+            Gi_dev[ind_set + 1][ni] = Gi_sum1
+            Gi_dev[ind_set + 2][ni] = Gi_sum2
+            Gi_dev[ind_set + 3][ni] = Gi_sum3
+            Gi_dev[ind_set + 4][ni] = Gi_sum4
+
+    """
+    ! --- Start III loop over ni atoms ---
+    """
+
+    for ni in range(1, natoms + 1):  # ! loop over atoms !
+
+        for nb1 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+            rij1 = 1.0 / xr_ij0(nb1, ni)
+
+            for n_set in range(1, n_set_ann + 1):
+                Gi_sum_01 = 0.0
+                Gi_sum_02 = 0.0
+                Gi_sum_03 = 0.0
+                Gi_sum_11 = 0.0
+                Gi_sum_12 = 0.0
+                Gi_sum_13 = 0.0
+                Gi_sum_21 = 0.0
+                Gi_sum_22 = 0.0
+                Gi_sum_23 = 0.0
+                Gi_sum_31 = 0.0
+                Gi_sum_32 = 0.0
+                Gi_sum_33 = 0.0
+                Gi_sum_41 = 0.0
+                Gi_sum_42 = 0.0
+                Gi_sum_43 = 0.0
+
+                fsij = fsij_dev[nb1][n_set][ni]
+
+                for nb2 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+                    fsik = 2. * fsij_dev[nb2][n_set][ni]
+
+                    cos_ijk = xr_ij1[nb1][ni] * xr_ij1[nb2][ni] + xr_ij2[nb1][ni] * xr_ij2[nb2][ni] + xr_ij3[nb1][ni] * \
+                              xr_ij3[nb2][ni]
+                    cos2_ijk = cos_ijk ** 2
+
+                    dcos_ijk[1] = (xr_ij1[nb2][ni] - xr_ij1[nb1][ni] * cos_ijk) * rij1
+                    dcos_ijk[2] = (xr_ij2[nb2][ni] - xr_ij2[nb1][ni] * cos_ijk) * rij1
+                    dcos_ijk[3] = (xr_ij3[nb2][ni] - xr_ij3[nb1][ni] * cos_ijk) * rij1
+
+                    Gi_sum_01 = Gi_sum_01 + fsik * dfs_rij_3D1[n_set][nb1][ni]
+                    Gi_sum_02 = Gi_sum_02 + fsik * dfs_rij_3D2[n_set][nb1][ni]
+                    Gi_sum_03 = Gi_sum_03 + fsik * dfs_rij_3D3[n_set][nb1][ni]
+
+                    dgij1 = cos_ijk * dfs_rij_3D1[n_set][nb1][ni] + fsij * dcos_ijk(1)
+                    dgij2 = cos_ijk * dfs_rij_3D2[n_set][nb1][ni] + fsij * dcos_ijk(2)
+                    dgij3 = cos_ijk * dfs_rij_3D3[n_set][nb1][ni] + fsij * dcos_ijk(3)
+                    Gi_sum_11 = Gi_sum_11 + fsik * dgij1
+                    Gi_sum_12 = Gi_sum_12 + fsik * dgij2
+                    Gi_sum_13 = Gi_sum_13 + fsik * dgij3
+
+                    Pl2 = (1.5 * cos2_ijk - 0.5);
+                    dPl2 = 3.0 * cos_ijk
+                    dgij1 = Pl2 * dfs_rij_3D1[n_set][nb1][ni] + fsij * dPl2 * dcos_ijk(1)
+                    dgij2 = Pl2 * dfs_rij_3D2[n_set][nb1][ni] + fsij * dPl2 * dcos_ijk(2)
+                    dgij3 = Pl2 * dfs_rij_3D3[n_set][nb1][ni] + fsij * dPl2 * dcos_ijk(3)
+                    Gi_sum_21 = Gi_sum_21 + fsik * dgij1
+                    Gi_sum_22 = Gi_sum_22 + fsik * dgij2
+                    Gi_sum_23 = Gi_sum_23 + fsik * dgij3
+
+                    Pl4 = (4.375 * cos2_ijk - 3.75) * cos2_ijk + 0.375
+                    dPl4 = (17.5 * cos2_ijk - 7.5) * cos_ijk
+                    dgij1 = Pl4 * dfs_rij_3D1[n_set][nb1][ni] + fsij * dPl4 * dcos_ijk(1)
+                    dgij2 = Pl4 * dfs_rij_3D2[n_set][nb1][ni] + fsij * dPl4 * dcos_ijk(2)
+                    dgij3 = Pl4 * dfs_rij_3D3[n_set][nb1][ni] + fsij * dPl4 * dcos_ijk(3)
+                    Gi_sum_31 = Gi_sum_31 + fsik * dgij1
+                    Gi_sum_32 = Gi_sum_32 + fsik * dgij2
+                    Gi_sum_33 = Gi_sum_33 + fsik * dgij3
+
+                    Pl6 = ((14.4375 * cos2_ijk - 19.6875) * cos2_ijk + 6.5625) * cos2_ijk - 0.3125
+                    dPl6 = (86.625 * cos2_ijk ** 2 - 78.75 * cos2_ijk + 13.125) * cos_ijk
+                    dgij1 = Pl6 * dfs_rij_3D1[n_set][nb1][ni] + fsij * dPl6 * dcos_ijk(1)
+                    dgij2 = Pl6 * dfs_rij_3D2[n_set][nb1][ni] + fsij * dPl6 * dcos_ijk(2)
+                    dgij3 = Pl6 * dfs_rij_3D3[n_set][nb1][ni] + fsij * dPl6 * dcos_ijk(3)
+                    Gi_sum_41 = Gi_sum_41 + fsik * dgij1
+                    Gi_sum_42 = Gi_sum_42 + fsik * dgij2
+                    Gi_sum_43 = Gi_sum_43 + fsik * dgij3
+
+                icol = n_set * 5 - 4
+
+                """
+                !if(iPOT_file_ver.gt.0) then
+                ! Gi_fact0 = 1.d0/(Gi_dev(icol,ni) + 0.5d0)
+                ! Gi_fact1 = 1.d0/(Gi_dev(icol+1,ni) + 0.5d0)
+                ! Gi_fact2 = 1.d0/(Gi_dev(icol+2,ni) + 0.5d0)
+                ! Gi_fact3 = 1.d0/(Gi_dev(icol+3,ni) + 0.5d0)
+                ! Gi_fact4 = 1.d0/(Gi_dev(icol+4,ni) + 0.5d0)
+                !else
+                ! Gi_fact0 = 1.d0; Gi_fact1 = 1.d0; Gi_fact2 = 1.d0;
+                ! Gi_fact3 = 1.d0; Gi_fact4 = 1.d0;
+                !endif
+                """
+                Gi_3D_dev1[icol][nb1][ni] = Gi_sum_01
+                Gi_3D_dev1[icol + 1][nb1][ni] = Gi_sum_11
+                Gi_3D_dev1[icol + 2][nb1][ni] = Gi_sum_21
+                Gi_3D_dev1[icol + 3][nb1][ni] = Gi_sum_31
+                Gi_3D_dev1[icol + 4][nb1][ni] = Gi_sum_41
+
+                Gi_3D_dev2[icol][nb1][ni] = Gi_sum_02
+                Gi_3D_dev2[icol + 1][nb1][ni] = Gi_sum_12
+                Gi_3D_dev2[icol + 2][nb1][ni] = Gi_sum_22
+                Gi_3D_dev2[icol + 3][nb1][ni] = Gi_sum_32
+                Gi_3D_dev2[icol + 4][nb1][ni] = Gi_sum_42
+
+                Gi_3D_dev3[icol][nb1][ni] = Gi_sum_03
+                Gi_3D_dev3[icol + 1][nb1][ni] = Gi_sum_13
+                Gi_3D_dev3[icol + 2][nb1][ni] = Gi_sum_23
+                Gi_3D_dev3[icol + 3][nb1][ni] = Gi_sum_33
+                Gi_3D_dev3[icol + 4][nb1][ni] = Gi_sum_43
+
+    if ireport > 0:
+        cpu_time(time_Gi)
+        time_Gi_total = time_Gi_total + (time_Gi - cpu_start)
+
+    for ni in range(1, natoms + 1):
+        if iPOT_file_ver > 0:
+            for icol in range(1, mG_dim + 1):
+                U1[icol] = math.log(Gi_dev[icol][ni] + 0.5)
+        else:
+            for icol in range(1, mG_dim + 1):
+                U1[icol] = Gi_dev[icol][ni]
+
+        """
+        ! --- Gis are done here for atom ni ---
+        ! --- Start NN on atom ni ---
+
+        ! -- Input Layer ---
+        """
+
+        for iraw in range(1, Nodes_of_layer[2] + 1):  # ! 1.. 20 !
+            U_vect = B1_ann[iraw]
+            for icol in range(1, Nodes_of_layer[1] + 1):  # ! 1.. 60 !
+                U_vect = U_vect + U1[icol] * W1_ann[icol][iraw]
+            U2[iraw] = 1.0 / (1.0 + math.exp(-U_vect)) + ActFunc_shift
+            expU = math.exp(-U_vect)
+            dfuN_dev[iraw][1][ni] = expU / (1.0 + expU) ** 2
+
+        """
+        ! -- Hidden Layers ---
+        """
+
+        for layer in range(2, net_layers - 2 + 1):
+            NLcurr = Nodes_of_layer[layer]
+            NLnext = Nodes_of_layer[layer + 1]
+            for iterator in range(1, NLcurr + 1):
+                # U1(1:NLcurr)=U2(1:NLcurr)
+                U1[iterator] = U2[iterator]
+
+            for iraw in range(1, NLnext + 1):  # ! 1.. 20 !
+                U_vect = B2_ann[iraw][layer]
+
+                for icol in range(NLcurr + 1):  # ! 1.. 20 !
+                    U_vect = U_vect + U1[icol] * W2_ann[icol][iraw][layer]
+                U2[iraw] = 1.0 / (1.0 + math.exp(-U_vect)) + ActFunc_shift
+                expU = math.exp(-U_vect)
+                dfuN_dev[iraw][layer][ni] = expU / (1.0 + expU) ** 2
+
+        """
+        ! -- Output Layer --- 
+        """
+        for iraw in range(1, Nodes_of_layer[net_layers] + 1):  # ! 1.. 8 !
+            U3_vect = B3_ann[iraw]
+            for icol in range(1, Nodes_of_layer[net_layers - 1] + 1):  # ! 1.. 20 !
+                U3_vect = U3_vect + U2[icol] * W3_ann[icol][iraw]
+
+        Ep_of[ni] = 2.0 * U3_vect
+        """
+        ! Twice the individual atomic energy  !
+        ! Devided by 2 later in MSR for	   !
+        ! compatibility with other potentials !
+        """
+
+    for ni in range(1, natoms + 1):
+
+        for nb1 in range(1, max_nbrs + 1):
+
+            """
+            ! --- DO ANN for each (i-j) pair using Gis as input vectors ---
+
+            ! -- Input Layer ---	
+            """
+
+            for iraw in range(1, Nodes_of_layer[2] + 1):  # ! 1.. 20 !
+                U_x1 = 0.0
+                U_x2 = 0.0
+                U_x3 = 0.0
+
+                for icol in range(1, Nodes_of_layer[1] + 1):  # ! 1.. 60 !
+
+                    U_x1 = U_x1 + Gi_3D_dev1[icol][nb1][ni] * W1_ann[icol][iraw]
+                    U_x2 = U_x2 + Gi_3D_dev2[icol][nb1][ni] * W1_ann[icol][iraw]
+                    U_x3 = U_x3 + Gi_3D_dev3[icol][nb1][ni] * W1_ann[icol][iraw]
+
+                U2f1[iraw] = U_x1 * dfuN_dev[iraw][1][ni]
+                U2f2[iraw] = U_x2 * dfuN_dev[iraw][1][ni]
+                U2f3[iraw] = U_x3 * dfuN_dev[iraw][1][ni]
+
+            """
+            ! -- Hidden Layers ---   
+            """
+            for layer in range(2, net_layers - 2 + 1):
+                NLcurr = Nodes_of_layer(layer)
+                NLnext = Nodes_of_layer(layer + 1)
+
+                for i in range(i, NLcurr + 1):
+                    U1f1[i] = U2f1[i]
+                    U1f2[i] = U2f2[i]
+                    U1f3[i] = U2f3[i]
+
+                for iraw in range(1, NLnext + 1):  # ! 1.. 20 !
+                    U_x1 = 0.0
+                    U_x2 = 0.0
+                    U_x3 = 0.0
+
+                    for icol in range(1, NLcurr + 1):  # ! 1.. 20 !
+                        U_x1 = U_x1 + U1f1[icol] * W2_ann[icol][iraw][layer]
+                        U_x2 = U_x2 + U1f2[icol] * W2_ann[icol][iraw][layer]
+                        U_x3 = U_x3 + U1f3[icol] * W2_ann[icol][iraw][layer]
+                    U2f1[iraw] = U_x1 * dfuN_dev[iraw][layer][ni]
+                    U2f2[iraw] = U_x2 * dfuN_dev[iraw][layer][ni]
+                    U2f3[iraw] = U_x3 * dfuN_dev[iraw][layer][ni]
+
+            """
+            ! -- Output Layer ---
+            """
+            for iraw in range(1, Nodes_of_layer[net_layers] + 1):  # ! 1.. 1 !
+                U_x1 = 0.0
+                U_x2 = 0.0
+                U_x3 = 0.0
+
+                for icol in range(1, Nodes_of_layer[net_layers - 1] + 1):  # ! 1.. 20 !
+                    U_x1 = U_x1 + U2f1[icol] * W3_ann[icol][iraw]
+                    U_x2 = U_x2 + U2f2[icol] * W3_ann[icol][iraw]
+                    U_x3 = U_x3 + U2f3[icol] * W3_ann[icol][iraw]
+                dBOP_param_dxij_[1][iraw][nb1][ni] = U_x1
+                dBOP_param_dxij_[2][iraw][nb1][ni] = U_x2
+                dBOP_param_dxij_[3][iraw][nb1][ni] = U_x3
+    """
+    ! --- End of ANN for each (i-j) pair using gij as input vectors ---
+    """
+    """
+    ! --- Calc Actual Force Vectors ---
+    """
+    ecohe = 0.0
+
+    for i in range(1, natoms + 1):  # ! loop over atoms !
+        fr = [0.0, 0.0, 0.0]
+
+        for nb1 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+            nj = nbr_list[nb1][ni]
+            """
+            !call mm_prefetch(dBOP_param_dxij_(1,1,nb1,nj),1)
+            !call mm_prefetch(dBOP_param_dxij_(1,1,nb2,nj),1)
+            """
+            ij_delta = min([abs(nj - ni), 1])  # ! 0 if ni=nj; 1 if ni=/=nj !
+            nbrs_of_j = ij_delta * max_nbrs  # ! rij < Rc !
+
+            nbi = nb1
+
+            for nb2 in range(1, nbrs_of_j + 1):  # ! search for i as a neighbor of j !
+                nj2 = nbr_list[nb2][nj]
+                if nj2 == ni:
+                    nbi = nb2  # ! i is the nbi-th nbr of j !
+            enddo
+
+            for iterator in range(1, 4):
+                # fij(:)=dBOP_param_dxij_(:,1,nb1,ni)-dBOP_param_dxij_(:,1,nbi,nj)
+                fij[iterator] == dBOP_param_dxij_[iterator][1][nb1][ni] - dBOP_param_dxij_[iterator][1][nbi][nj]
+                # fr(1:3) = fr(1:3) + fij(1:3)   ! x,y,z forces !
+                fr[iterator] = fr[iterator] + fij[iterator]
+                # frr(1:3,ni) = fr(1:3)
+                frr[iterator][ni] = fr[iterator]
+
+        ecohe = ecohe + 0.50 * Ep_of[ni]
+
+
+"""
+! ---------------------------------------------------------------------
+! Calculates atomic forces using OpenACC
+! ---------------------------------------------------------------------
+"""
+
+
+def Frc_ANN_ACC(ecohe):
+    # u use sys_ACC
+    # u use atoms
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    iMb = 1024 ** 2  # etait integer kind 8 sera number (long)
+    memory_request = -1  # integer kind 8
+    memory1 = -1  # integer
+
+    dgij = [0.0] * 4  # vecteur taille 3, double
+    xr_ij = [0.0] * 4  # vecteur taille 3, double
+    xr_ik = [0.0] * 4  # vecteur taille 3, double
+    dcos_ijk = [0.0] * 4  # vecteur taille 3, double
+
+    r0Rc = []  # vecteur taille n_set_ann, double
+    r0pRc = []  # vecteur taille n_set_ann, double
+
+    U1f = []  # 2 dim , double
+    U2f = []  # 2 dim , double
+    Gi_dev = []  # 2 dim , double
+
+    xr_ij_dev = []  # 3 dim , double
+    fsij_dev = []  # 3 dim , double
+    dfuN_dev = []  # 3 dim , double
+
+    dfs_rij_3D = []  # 4 dim , double
+    Gi_3D_dev = []  # 4 dim , double
+    dBOP_param_dxij_ = []  # 4 dim , double
+
+    ialloc = []
+    for i in range(10 + 1): ialloc.append(0)
+
+    if ihalt != 0:
+        return
+
+    """
+    write(6,*)'Frc_ANN_ACC: natoms=',natoms,' max_nbrs=',max_nbrs
+    """
+
+    max_ls = 1
+    for i in range(2, net_layers - 1 + 1):
+        if Nodes_of_layer[i] > max_ls:
+            max_ls = Nodes_of_layer[i]
+
+    nBOP_params = Nodes_of_layer[net_layers]
+    """
+    ! Those are replacements of ACC_* equivalents	!
+    ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
+    """
+
+    # gpu My_GPU_free_mem = GET_GPU_FREE_MEM(My_GPU) / iMb  #! in Mbs !
+    """
+    !	 write(6,*)'1: My_GPU_free_mem=',My_GPU_free_mem
+    """
+    memory1 = 4 * (2 * max_nbrs + n_set_ann * max_nbrs) + mG_dim + 3 * (
+                mG_dim + nBOP_params) * max_nbrs + max_ls * net_layers
+    memory_request = memory1 * natoms * 8
+    memory_request = memory_request / iMb  # ! in Mbs !
+    memory_request = memory_request * 1.3  # ! safe margin !
+
+    if nACC_devices > 0:
+        if memory_request > My_GPU_free_mem:
+            print("Erreur ligne 914 _ANN: memory_request>My_GPU_free_mem")
+            print(memory_request + " " + My_GPU_free_mem + " " + My_GPU + " " + mynod)
+            ihalt = 1
+            return
+
+    # f 13   format(/,'ERROR: Requested memory in Frc_ANN_ACC is:',i6,
+    # f 1 ' Mb,',/,'which exceeds the available GPU memory of',i6,
+    # f 2 ' Mb on GPU:',i2,' on node:',i5,/,'Increase number of nodes.')
+
+    for i in range(4):  # ATTENTION LA POS 0 EST UTILE!!!
+        xr_ij_dev.append([])
+        for j in range(max_nbrs + 1):
+            xr_ij_dev[i].append([])
+            for k in range(natoms + 1):
+                xr_ij_dev[i][j].append(0.0)
+
+    for i in range(max_nbrs + 1):
+        fsij_dev.append([])
+        for j in range(n_set_ann + 1):
+            fsij_dev[i].append([])
+            for k in range(natoms + 1):
+                fsij_dev[i][j].append(0.0)
+
+    for i in range(3 + 1):
+        dfs_rij_3D.append([])
+        for j in range(max_nbrs + 1):
+            dfs_rij_3D[i].append([])
+            for k in range(natoms + 1):
+                dfs_rij_3D[i][j].append([])
+                for l in range(n_set_ann + 1):
+                    dfs_rij_3D[i][j][k].append(0.0)
+
+    for i in range(mG_dim + 1):
+        Gi_dev.append([])
+        for j in range(natoms + 1):
+            Gi_dev[i].append(0.0)
+
+    for i in range(3 + 1):
+        Gi_3D_dev.append([])
+        for j in range(mG_dim + 1):
+            Gi_3D_dev[i].append([])
+            for k in range(max_nbrs + 1):
+                Gi_3D_dev[i][j].append([])
+                for l in range(natoms + 1):
+                    Gi_3D_dev[i][j][k].append(0.0)
+
+    for i in range(max_ls + 1):
+        dfuN_dev.append([])
+        for j in range(net_layers - 2 + 1):
+            dfuN_dev[i].append([])
+            for k in range(natoms + 1):
+                dfuN_dev[i][j].append(0.0)
+
+    for i in range(3 + 1):
+        U1f.append([])
+        for j in range(max_ls + 1):
+            U1f[i].append(0.0)
+
+    for i in range(3 + 1):
+        U2f.append([])
+        for j in range(max_ls + 1):
+            U2f[i].append(0.0)
+
+    for i in range(3 + 1):
+        dBOP_param_dxij_.append([])
+        for j in range(nBOP_params + 1):
+            dBOP_param_dxij_[i].append([])
+            for k in range(max_nbrs + 1):
+                dBOP_param_dxij_[i][j].append([])
+                for l in range(natoms + 1):
+                    dBOP_param_dxij_[i][j][k].append(0.0)
+
+    ierr = 0
+    for i in range(1, 10 + 1):
+        ierr = ierr + ialloc[i]
+    if ierr != 0:
+        print('ERROR allocating x in Frc_ANN_ACC')
+        ihalt = 1
+        return
+
+    ecohe = 0.0
+    Rc = Rc_ann
+    Rc2 = Rc_ann ** 2
+    d4 = d4_ann
+    Sigma2 = 2.0 * Gauss_ann ** 2
+
+    r0Rc = []
+    r0pRc = []
+    for i in range(len(r0_value)):  # len = n_set_ann+1 normalement
+        # r0Rc(:) = Rc_ann*r0_value(:)
+        # r0pRc(:) = Rc_ann + r0_value(:)
+        r0Rc.append(Rc_ann * r0_value[i])
+        r0pRc.append(Rc_ann * r0_value[i])
+
+    h11 = h[1][1]
+    h12 = h[1][2]
+    h13 = h[1][3]
+    h22 = h[2][2]
+    h23 = h[2][3]
+    h33 = h[3][3]
+
+    """
+    !
+    ! --- Start I loop over ni atoms ---
+    !
+    """
+
+    for ni in range(1, natoms + 1):  # loop over atoms
+        for nb1 in range(1, max_nbrs + 1):  # Loop I: i - j bond
+
+            nj = nbr_list[nb1, ni]
+            ij_delta = 1 - min([abs(nj - ni), 1])  # ! 1 if ni=nj; 0 if ni=/=nj !
+
+            sxn = sx[ni]
+            syn = sy[ni]
+            szn = sz[ni]
+
+            sx0 = sx[nj] - sxn
+            sx0 = sx0 - dnint[sx0]  # ! make periodic along X !
+            sy0 = sy[nj] - syn
+            sy0 = sy0 - dnint[sy0]  # ! make periodic along Y !
+            sz0 = sz[nj] - szn
+            sz0 = sz0 - dnint[sz0]  # ! make periodic along Z !
+
+            xij = h11 * sx0 + h12 * sy0 + h13 * sz0
+            yij = h22 * sy0 + h23 * sz0
+            zij = h33 * sz0
+            r2ij = xij ** 2 + yij ** 2 + zij ** 2 + ij_delta * Rc2  # ! rij+Rc when i=j
+            rij = sqrt[r2ij]
+            r1ij = 1.0 / rij
+
+            xr_ij[1] = xij * r1ij
+            xr_ij[2] = yij * r1ij
+            xr_ij[3] = zij * r1ij
+            xr_ij_dev[0][nb1][ni] = rij
+            xr_ij_dev[1][nb1][ni] = xr_ij[1]
+            xr_ij_dev[2][nb1][ni] = xr_ij[2]
+            xr_ij_dev[3][nb1][ni] = xr_ij[3]
+
+            RcRij = max([Rc - rij, 0.0])
+            RcRij3 = RcRij ** 3
+            RcRij4 = RcRij3 * RcRij
+            RcRij5 = RcRij4 * RcRij
+            fc_rij = 0.25 * RcRij4 / (d4 + RcRij4)
+            denominator = (Gauss_ann * (d4 + RcRij4)) ** 2
+
+            for n_set in range(1, n_set_ann + 1):
+                r0 = r0_value[n_set]  # ! do not use r0G_value() here !
+                RijRo = rij - r0
+                expRijRo = math.exp(-(RijRo / Gauss_ann) ** 2)
+                fsij_dev[nb1][n_set][ni] = fc_rij * expRijRo
+                dfsij = (r0Rc[n_set] + rij * (rij - r0pRc[n_set]) - Sigma2) * d4 - -RijRo * RcRij5
+                dfsij = 0.5 * dfsij * RcRij3 * expRijRo / denominator  # ! *2/4 !
+                dfs_rij_3D[1][nb1][ni][n_set] = dfsij * xr_ij[1]  # ! dfs_ij*xij/rij !
+                dfs_rij_3D[2][nb1][ni][n_set] = dfsij * xr_ij[2]  # ! dfs_ij*xij/rij !
+                dfs_rij_3D[3][nb1][ni][n_set] = dfsij * xr_ij[3]  # ! dfs_ij*xij/rij !
+
+    """
+    !
+    ! --- Start II loop over ni atoms ---
+    !
+    """
+    for ni in range(1, natoms + 1):  # ! loop over atoms !
+        for n_set in range(1, n_set_ann + 1):
+            Gi_sum0 = 0.0
+            Gi_sum1 = 0.0
+            Gi_sum2 = 0.0
+            Gi_sum3 = 0.0
+            Gi_sum4 = 0.0
+            for nb1 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+                for nb2 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+                    fsij_fsik = fsij_dev[nb1][n_set][ni] * fsij_dev[nb2][n_set][ni]
+
+                    xr_ij[1] = xr_ij_dev[1][nb1][ni]
+                    xr_ij[2] = xr_ij_dev[2][nb1][ni]
+                    xr_ij[3] = xr_ij_dev[3][nb1][ni]
+
+                    xr_ik[1] = xr_ij_dev[1][nb2][ni]
+                    xr_ik[2] = xr_ij_dev[2][nb2][ni]
+                    xr_ik[3] = xr_ij_dev[3][nb2][ni]
+
+                    cos_ijk = xr_ij[1] * xr_ik[1] + xr_ij[2] * xr_ik[2] + xr_ij[3] * xr_ik[3]
+                    cos2_ijk = cos_ijk ** 2
+                    Pl2 = 1.5 * cos2_ijk - 0.5
+                    Pl4 = (4.375 * cos2_ijk - 3.75) * cos2_ijk + 0.375
+                    pl6 = ((14.4375 * cos2_ijk - 19.6875) * cos2_ijk + 6.5625) * cos2_ijk - 0.3125
+
+                    Gi_sum0 = Gi_sum0 + fsij_fsik
+                    Gi_sum1 = Gi_sum1 + cos_ijk * fsij_fsik
+                    Gi_sum2 = Gi_sum2 + Pl2 * fsij_fsik
+                    Gi_sum3 = Gi_sum3 + Pl4 * fsij_fsik
+                    Gi_sum4 = Gi_sum4 + Pl6 * fsij_fsik
+            """
+            ! Calc. global G-vector !
+            """
+            ind_set = n_set * 5 - 4
+            Gi_dev[ind_set][ni] = Gi_sum0
+            Gi_dev[ind_set + 1][ni] = Gi_sum1
+            Gi_dev[ind_set + 2][ni] = Gi_sum2
+            Gi_dev[ind_set + 3][ni] = Gi_sum3
+            Gi_dev[ind_set + 4][ni] = Gi_sum4
+    """
+    ! --- Start III loop over ni atoms ---
+    """
+    for ni in range(1, natoms + 1):  # loop over atoms
+        for nb1 in range(1, max_nbrs + 1):  # Loop I: i - j bond
+            for n_set in range(1, n_set_ann + 1):
+
+                Gi_sum0_x = 0.0
+                Gi_sum0_y = 0.0
+                Gi_sum0_z = 0.0
+                Gi_sum1_x = 0.0
+                Gi_sum1_y = 0.0
+                Gi_sum1_z = 0.0
+                Gi_sum2_x = 0.0
+                Gi_sum2_y = 0.0
+                Gi_sum2_z = 0.0
+                Gi_sum3_x = 0.0
+                Gi_sum3_y = 0.0
+                Gi_sum3_z = 0.0
+                Gi_sum4_x = 0.0
+                Gi_sum4_y = 0.0
+                Gi_sum4_z = 0.0
+
+                rij = xr_ij_dev[0][nb1][ni]
+                xr_ij[1] = xr_ij_dev[1][nb1][ni]
+                xr_ij[2] = xr_ij_dev[2][nb1][ni]
+                xr_ij[3] = xr_ij_dev[3][nb1][ni]
+                rij1 = 1.0 / rij
+
+                fsij = fsij_dev[nb1][n_set][ni]
+
+                for nb2 in range(1, max_nbrs + 1):
+                    fsik = 2.0 * fsij_dev[nb2][n_set][ni]
+
+                    xr_ik[1] = xr_ij_dev[1][nb2][ni]
+                    xr_ik[2] = xr_ij_dev[2][nb2][ni]
+                    xr_ik[3] = xr_ij_dev[3][nb2][ni]
+
+                    cos_ijk = xr_ij[1] * xr_ik[1] + xr_ij[2] * xr_ik[2] + xr_ij[3] * xr_ik[3]
+                    cos2_ijk = cos_ijk ** 2
+                    dcos_ijk[1] = [xr_ik[1] - xr_ij[1] * cos_ijk] * rij1
+                    dcos_ijk[2] = [xr_ik[2] - xr_ij[2] * cos_ijk] * rij1
+                    dcos_ijk[3] = [xr_ik[3] - xr_ij[3] * cos_ijk] * rij1
+
+                    """		   
+                    ! (xik/rik - xij/rij*cos_ijk) / rij  !
+                    """
+
+                    Gi_sum0_x = Gi_sum0_x + fsik * dfs_rij_3D[1][nb1][ni][n_set]
+                    Gi_sum0_y = Gi_sum0_y + fsik * dfs_rij_3D[2][nb1][ni][n_set]
+                    Gi_sum0_z = Gi_sum0_z + fsik * dfs_rij_3D[3][nb1][ni][n_set]
+
+                    dgij[1] = cos_ijk * dfs_rij_3D[1][nb1][ni][n_set] + fsij * dcos_ijk[1]
+                    dgij[2] = cos_ijk * dfs_rij_3D[2][nb1][ni][n_set] + fsij * dcos_ijk[2]
+                    dgij[3] = cos_ijk * dfs_rij_3D[3][nb1][ni][n_set] + fsij * dcos_ijk[3]
+                    Gi_sum1_x = Gi_sum1_x + fsik * dgij[1]
+                    Gi_sum1_y = Gi_sum1_y + fsik * dgij[2]
+                    Gi_sum1_z = Gi_sum1_z + fsik * dgij[3]
+
+                    Pl2 = (1.50 * cos2_ijk - 0.50)
+                    dPl2 = 3.0 * cos_ijk
+                    dgij[1] = Pl2 * dfs_rij_3D[1][nb1][ni][n_set] + fsij * dPl2 * dcos_ijk[1]
+                    dgij[2] = Pl2 * dfs_rij_3D[2][nb1][ni][n_set] + fsij * dPl2 * dcos_ijk[2]
+                    dgij[3] = Pl2 * dfs_rij_3D[3][nb1][ni][n_set] + fsij * dPl2 * dcos_ijk[3]
+                    Gi_sum2_x = Gi_sum2_x + fsik * dgij[1]
+                    Gi_sum2_y = Gi_sum2_y + fsik * dgij[2]
+                    Gi_sum2_z = Gi_sum2_z + fsik * dgij[3]
+
+                    Pl4 = (4.3750 * cos2_ijk - 3.750) * cos2_ijk + 0.3750
+                    dPl4 = (17.50 * cos2_ijk - 7.50) * cos_ijk
+                    dgij[1] = Pl4 * dfs_rij_3D[1][nb1][ni][n_set] + fsij * dPl4 * dcos_ijk[1]
+                    dgij[2] = Pl4 * dfs_rij_3D[2][nb1][ni][n_set] + fsij * dPl4 * dcos_ijk[2]
+                    dgij[3] = Pl4 * dfs_rij_3D[3][nb1][ni][n_set] + fsij * dPl4 * dcos_ijk[3]
+                    Gi_sum3_x = Gi_sum3_x + fsik * dgij[1]
+                    Gi_sum3_y = Gi_sum3_y + fsik * dgij[2]
+                    Gi_sum3_z = Gi_sum3_z + fsik * dgij[3]
+
+                    Pl6 = ((14.43750 * cos2_ijk - 19.68750) * cos2_ijk + 6.5625) * cos2_ijk - 0.31250
+                    dPl6 = (86.6250 * cos2_ijk ** 2 - 78.750 * cos2_ijk + 13.1250) * cos_ijk
+                    dgij[1] = Pl6 * dfs_rij_3D[1][nb1][ni][n_set] + fsij * dPl6 * dcos_ijk[1]
+                    dgij[2] = Pl6 * dfs_rij_3D[2][nb1][ni][n_set] + fsij * dPl6 * dcos_ijk[2]
+                    dgij[3] = Pl6 * dfs_rij_3D[3][nb1][ni][n_set] + fsij * dPl6 * dcos_ijk[3]
+                    Gi_sum4_x = Gi_sum4_x + fsik * dgij[1]
+                    Gi_sum4_y = Gi_sum4_y + fsik * dgij[2]
+                    Gi_sum4_z = Gi_sum4_z + fsik * dgij[3]
+
+                icol = n_set * 5 - 4
+
+                if iPOT_file_ver > 0:
+                    Gi_fact0 = 1.0 / (Gi_ev[icol, ni] + 0.50)
+                    Gi_fact1 = 1.0 / (Gi_ev[icol + 1, ni] + 0.50)
+                    Gi_fact2 = 1.0 / (Gi_ev[icol + 2, ni] + 0.50)
+                    Gi_fact3 = 1.0 / (Gi_ev[icol + 3, ni] + 0.50)
+                    Gi_fact4 = 1.0 / (Gi_ev[icol + 4, ni] + 0.50)
+                else:
+                    Gi_fact0 = 1.0
+                    Gi_fact1 = 1.0
+                    Gi_fact2 = 1.0
+                    Gi_fact3 = 1.0
+                    Gi_fact4 = 1.0
+
+                Gi_3D_dev[1][icol][nb1][ni] = Gi_sum0_x * Gi_fact0
+                Gi_3D_dev[2][icol][nb1][ni] = Gi_sum0_y * Gi_fact0
+                Gi_3D_dev[3][icol][nb1][ni] = Gi_sum0_z * Gi_fact0
+
+                Gi_3D_dev[1][icol + 1][nb1][ni] = Gi_sum1_x * Gi_fact1
+                Gi_3D_dev[2][icol + 1][nb1][ni] = Gi_sum1_y * Gi_fact1
+                Gi_3D_dev[3][icol + 1][nb1][ni] = Gi_sum1_z * Gi_fact1
+
+                Gi_3D_dev[1][icol + 2][nb1][ni] = Gi_sum2_x * Gi_fact2
+                Gi_3D_dev[2][icol + 2][nb1][ni] = Gi_sum2_y * Gi_fact2
+                Gi_3D_dev[3][icol + 2][nb1][ni] = Gi_sum2_z * Gi_fact2
+
+                Gi_3D_dev[1][icol + 3][nb1][ni] = Gi_sum3_x * Gi_fact3
+                Gi_3D_dev[2][icol + 3][nb1][ni] = Gi_sum3_y * Gi_fact3
+                Gi_3D_dev[3][icol + 3][nb1][ni] = Gi_sum3_z * Gi_fact3
+
+                Gi_3D_dev[1][icol + 4][nb1][ni] = Gi_sum4_x * Gi_fact4
+                Gi_3D_dev[2][icol + 4][nb1][ni] = Gi_sum4_y * Gi_fact4
+                Gi_3D_dev[3][icol + 4][nb1][ni] = Gi_sum4_z * Gi_fact4
+
+    for ni in range(1, natoms + 1):
+
+        if iPOT_file_ver > 0:
+            for icol in range(1, mG_dim + 1):
+                U1[icol] = math.log(Gi_dev[icol][ni] + 0.5)
+        else:
+            for icol in range(1, mG_dim + 1):
+                U1[icol] = Gi_dev[icol][ni]
+
+        """
+        ! --- Gis are done here for atom ni ---
+        ! --- Start NN on atom ni ---
+
+        ! -- Input Layer ---
+        """
+
+        for iraw in range(1, Nodes_of_layer[2] + 1):  # ! 1.. 20 !
+            U_vect = B1_ann[iraw]
+            for icol in range(1, Nodes_of_layer[1] + 1):  # ! 1.. 60 !
+                U_vect = U_vect + U1[icol] * W1_ann[icol][iraw]
+            U2[iraw] = 1.0 / (1.0 + math.exp(-U_vect)) + ActFunc_shift
+            expU = math.exp(-U_vect)
+            dfuN_dev[iraw][1][ni] = expU / (1.0 + expU) ** 2
+
+        """
+        !  -- Hidden Layers ---   
+        """
+
+        for layer in range(2, net_layers - 2 + 1):
+            NLcurr = Nodes_of_layer[layer]
+            NLnext = Nodes_of_layer[layer + 1]
+            for iterator in range(1, NLcurr + 1):
+                # U1(1:NLcurr)=U2(1:NLcurr)
+                U1[iterator] = U2[iterator]
+
+            for iraw in range(1, NLnext + 1):  # ! 1.. 20 !
+                U_vect = B2_ann[iraw][layer]
+                for icol in range(1, NLcurr + 1):  # ! 1.. 20 !
+                    U_vect = U_vect + U1[icol] * W2_ann[icol][iraw][layer]
+                U2[iraw] = 1.0 / (1.0 + math.exp(-U_vect)) + ActFunc_shift
+                expU = math.exp[-U_vect]
+                dfuN_dev[iraw][layer][ni] = expU / (1.0 + expU) ** 2
+
+        """
+        ! -- Output Layer ---	 
+        """
+
+        for iraw in range(1, Nodes_of_layer[net_layers] + 1):  # ! 1.. 8 !
+            U3_vect = B3_ann[iraw]
+            for icol in range(1, Nodes_of_layer[net_layers - 1] + 1):  # ! 1.. 20 !
+                U3_vect = U3_vect + U2[icol] * W3_ann[icol][iraw]
+
+        Ep_of[ni] = 2.0 * U3_vect
+        """
+        ! Twice the individual atomic energy  !
+        ! Devided by 2 later in MSR for	   !
+        ! compatibility with other potentials !
+        """
+
+    for ni in range(1, natoms + 1):
+        for nb1 in range(1, max_nbrs + 1):
+
+            """
+            ! --- DO ANN for each (i-j) pair using Gis as input vectors ---
+
+            ! -- Input Layer ---  
+            """
+
+            for iraw in range(1, Nodes_of_layer[2] + 1):  # ! 1.. 20 !
+                U_x = 0.0
+                U_y = 0.0
+                U_z = 0.0
+                for icol in range(1, Nodes_of_layer[1] + 1):  # ! 1.. 60 !
+                    U_x = U_x + Gi_3D_dev[1][icol][nb1][ni] * W1_ann[icol][iraw]
+                    U_y = U_y + Gi_3D_dev[2][icol][nb1][ni] * W1_ann[icol][iraw]
+                    U_z = U_z + Gi_3D_dev[3][icol][nb1][ni] * W1_ann[icol][iraw]
+                U2f[1][iraw] = U_x * dfuN_dev[iraw][1][ni]
+                U2f[2][iraw] = U_y * dfuN_dev[iraw][1][ni]
+                U2f[3][iraw] = U_z * dfuN_dev[iraw][1][ni]
+
+            """
+            ! -- Hidden Layers --- 
+            """
+            for layer in range(2, net_layers - 2 + 1):
+                NLcurr = Nodes_of_layer[layer]
+                NLnext = Nodes_of_layer[layer + 1]
+
+                for i in range(1, NLcurr + 1):
+                    U1f[1][i] = U2f[1][i]
+                    U1f[2][i] = U2f[2][i]
+                    U1f[3][i] = U2f[3][i]
+
+                for iraw in range(1, NLnext + 1):  # ! 1.. 20 !
+                    U_x = 0.0
+                    U_y = 0.0
+                    U_z = 0.0
+
+                    for icol in range(1, NLcurr + 1):  # ! 1.. 20 !
+                        U_x = U_x + U1f[1][icol] * W2_ann[icol][iraw][layer]
+                        U_y = U_y + U1f[2][icol] * W2_ann[icol][iraw][layer]
+                        U_z = U_z + U1f[3][icol] * W2_ann[icol][iraw][layer]
+
+                    U2f[1][iraw] = U_x * dfuN_dev[iraw][layer][ni]
+                    U2f[2][iraw] = U_y * dfuN_dev[iraw][layer][ni]
+                    U2f[3][iraw] = U_z * dfuN_dev[iraw][layer][ni]
+
+            """
+            ! -- Output Layer ---
+            """
+
+            for iraw in range(1, Nodes_of_layer[net_layers] + 1):  # ! 1.. 1 !
+
+                U_x = 0.0
+                U_y = 0.0
+                U_z = 0.0
+
+                for icol in range(1, Nodes_of_layer[net_layers - 1] + 1):  # ! 1.. 20 !
+                    U_x = U_x + U2f[1][icol] * W3_ann[icol][iraw]
+                    U_y = U_y + U2f[2][icol] * W3_ann[icol][iraw]
+                    U_z = U_z + U2f[3][icol] * W3_ann[icol][iraw]
+
+                dBOP_param_dxij_[1][iraw][nb1][ni] = U_x
+                dBOP_param_dxij_[2][iraw][nb1][ni] = U_y
+                dBOP_param_dxij_[3][iraw][nb1][ni] = U_z
+
+    """
+    ! --- End of ANN for each (i-j) pair using gij as input vectors ---
+
+    ! --- Calc Actual Force Vectors ---
+    """
+    ecohe = 0.0
+
+    for ni in range(1, natoms + 1):  # ! loop over atoms !
+
+        frr1 = 0.0
+        frr2 = 0.0
+        frr3 = 0.0
+
+        for nb1 in range(1, max_nbrs + 1):  # ! Loop I: i - j bond !
+            nj = nbr_list[nb1][ni]
+            ij_delta = min([abs(nj - ni), 1])  # ! 0 if ni=nj; 1 if ni=/=nj !
+            nbrs_of_j = ij_delta * max_nbrs  # ! rij < Rc !
+            nbi = nb1
+
+            for nb2 in range(1, nbrs_of_j + 1):  # ! search for i as a neighbor of j !
+                nj2 = nbr_list[nb2][nj]
+                if nj2 == ni:
+                    nbi = nb2  # ! i is the nbi-th nbr of j !
+
+            # ! Y3ij - Y3ji !
+            fij1 = dBOP_param_dxij_[1][1][nb1][ni] - dBOP_param_dxij_[1][1][nbi][nj]
+            fij2 = dBOP_param_dxij_[2][1][nb1][ni] - dBOP_param_dxij_[2][1][nbi][nj]
+            fij3 = dBOP_param_dxij_[3][1][nb1][ni] - dBOP_param_dxij_[3][1][nbi][nj]
+            frr1 = frr1 + fij1  # ! x,y,z forces !
+            frr2 = frr2 + fij2  # ! x,y,z forces !
+            frr3 = frr3 + fij3  # ! x,y],z forces !
+
+        frr[1][ni] = frr1
+        frr[2][ni] = frr2
+        frr[3][ni] = frr3
+
+        ecohe = ecohe + 0.5 * Ep_of[ni]
+
+    xr_ij_dev = []
+    fsij_dev = []
+    dfs_rij_3D = []
+    Gi_dev = []
+    Gi_3D_dev = []
+    dfuN_dev = []
+    U1f = []
+    U2f = []
+    dBOP_param_dxij_ = []
+
+    ierr = 0
+    for i in range(1, 10 + 1):
+        ierr = ierr + ialloc[i]
+    if ierr != 0:
+        print('ERROR deallocating x in Frc_ANN_ACC')
+        ihalt = 1
+
+
+"""
+!						! Frc_ANN_ACC  !
+! ---------------------------------------------------------------------
+!						! alloc_types_ANN !
+"""
+
+
+def alloc_types_ANN(ierror):
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    ialloc = []
+    for i in range(8 + 1): ialloc.append(0)
+
+    max_cols = 1
+    max_raws = 1
+    for i in range(2, net_layers - 2 + 1):
+        if Nodes_of_layer[i] > max_cols:
+            max_cols = Nodes_of_layer[i]
+        if Nodes_of_layer[i + 1] > max_raws:
+            max_raws = Nodes_of_layer[i + 1]
+
+    Ncols1 = Nodes_of_layer[1]
+    Nraws1 = Nodes_of_layer[2]
+    Ncols2 = max_cols
+    Nraws2 = max_raws
+    Ncols3 = Nodes_of_layer[net_layers - 1]
+    Nraws3 = Nodes_of_layer[net_layers]
+
+    nbuf_dim = Ncols1 * Nraws1 + (net_layers - 2) * max_cols * max_raws + Ncols3 * Nraws3
+
+    for i in range(Ncols1 + 1):
+        W1_ann.append([])
+        for j in range(Nraws1 + 1):
+            W1_ann[i].append(0.0)
+
+    for i in range(Ncols2 + 1):
+        W2_ann.append([])
+        for j in range(Nraws2 + 1):
+            W2_ann[i].append([])
+            for k in range(net_layers - 2 + 1):
+                W2_ann[i][j].append(0.0)
+
+    for i in range(Ncols3 + 1):
+        W3_ann.append([])
+        for j in range(Nraws3 + 1):
+            W3_ann[i].append(0.0)
+
+    for i in range(Nraws1 + 1): B1_ann.append(0.0)
+
+    for i in range(Nraws2 + 1):
+        B2_ann.append([])
+        for j in range(net_layers - 2 + 1):
+            B2_ann[i].append(0.0)
+
+    for i in range(Nraws3 + 1): B3_ann.append(0.0)
+
+    for i in range(nbuf_dim + 1): buf_ann.append(0.0)
+
+    ierror = 0
+    for i in range(1, 7 + 1):
+        ierror = ierror + ialloc[i]
+
+
+"""
+!						! alloc_types_ANN !
+! ---------------------------------------------------------------------
+!						! deall_types_ANN !
+"""
+
+
+def deall_types_ANN(ierror):
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    ialloc = []
+    for i in range(8 + 1): ialloc.append(0)
+
+    W1_ann = []
+    W2_ann = []
+    W3_ann = []
+
+    B1_ann = []
+    B2_ann = []
+    B3_ann = []
+
+    r0_value = []
+    r0G_value = []
+    buf_ann = []
+
+    ierror = 0
+    for i in range(1, 8 + 1):
+        ierror = ierror + ialloc[i]
+
+
+"""
+!					! deall_types_ANN !
+! ---------------------------------------------------------------------
+!					! alloc_atoms_ANN !
+"""
+
+
+def alloc_atoms_ANN(ierror):
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    ialloc = []
+    for i in range(17 + 1): ialloc.append(0)
+
+    max_ls = 1
+    for i in range(1, net_layers + 1):
+        if Nodes_of_layer[i] > max_ls:
+            max_ls = Nodes_of_layer[i]
+
+    lnodes = Nodes_of_layer[net_layers]
+
+    # gpu if I_have_GPU == 0:
+    # gpu allocate(dBOP_param_dxij(3,lnodes,nbrs_per_atom,natoms_alloc), stat=ialloc(1))
+
+    for i in range(5):  # ATTENTION LA POS 0 EST UTILE!!!
+        Gi_atom.append([])
+        for j in range(n_set_ann + 1):
+            Gi_atom[i].append([])
+            for k in range(max_tri_index + 1):
+                Gi_atom[i][j].append(0.0)
+
+    for i in range(5):  # ATTENTION LA POS 0 EST UTILE!!!
+        dG_i.append([])
+        for j in range(n_set_ann + 1):
+            dG_i[i].append([])
+            for k in range(max_tri_index + 1):
+                dG_i[i][j].append(0.0)
+
+    for i in range(mG_dim + 1):
+        Gi_list.append([])
+        for j in range(natoms_alloc + 1):
+            Gi_list[i].append(0.0)
+
+    for i in range(mG_dim + 1):
+        Gi_new.append([])
+        for j in range(nbrs_per_atom + 1):
+            Gi_new[i].append(0.0)
+
+    for i in range(max_ls + 1): U1.append(0.0)
+    for i in range(max_ls + 1): U2.append(0.0)
+
+    for i in range(nbrs_per_atom + 1):
+        xr_ij0.append([])
+        for j in range(natoms_alloc + 1):
+            xr_ij0[i].append(0.0)
+
+    for i in range(nbrs_per_atom + 1):
+        xr_ij1.append([])
+        for j in range(natoms_alloc + 1):
+            xr_ij1[i].append(0.0)
+
+    for i in range(nbrs_per_atom + 1):
+        xr_ij2.append([])
+        for j in range(natoms_alloc + 1):
+            xr_ij2[i].append(0.0)
+
+    for i in range(nbrs_per_atom + 1):
+        xr_ij3.append([])
+        for j in range(natoms_alloc + 1):
+            xr_ij3[i].append(0.0)
+
+    for i in range(nbrs_per_atom + 1):
+        fsij_dev.append([])
+        for j in range(n_set_ann + 1):
+            fsij_dev[i].append([])
+            for k in range(natoms_alloc + 1):
+                fsij_dev[i][j].append(0.0)
+
+    for i in range(n_set_ann + 1):
+        dfs_rij_3D1.append([])
+        for j in range(nbrs_per_atom + 1):
+            dfs_rij_3D1[i].append([])
+            for k in range(natoms_alloc + 1):
+                dfs_rij_3D1[i][j].append(0.0)
+
+    for i in range(n_set_ann + 1):
+        dfs_rij_3D2.append([])
+        for j in range(nbrs_per_atom + 1):
+            dfs_rij_3D2[i].append([])
+            for k in range(natoms_alloc + 1):
+                dfs_rij_3D2[i][j].append(0.0)
+
+    for i in range(n_set_ann + 1):
+        dfs_rij_3D3.append([])
+        for j in range(nbrs_per_atom + 1):
+            dfs_rij_3D3[i].append([])
+            for k in range(natoms_alloc + 1):
+                dfs_rij_3D3[i][j].append(0.0)
+
+    for i in range(mG_dim + 1):
+        Gi_dev.append([])
+        for j in range(natoms_alloc + 1):
+            Gi_dev1[i].append(0.0)
+
+    for i in range(mG_dim + 1):
+        Gi_3D_dev1.append([])
+        for j in range(nbrs_per_atom + 1):
+            Gi_3D_dev1[i].append([])
+            for k in range(natoms_alloc + 1):
+                Gi_3D_dev1[i][j].append(0.0)
+
+    for i in range(mG_dim + 1):
+        Gi_3D_dev2.append([])
+        for j in range(nbrs_per_atom + 1):
+            Gi_3D_dev2[i].append([])
+            for k in range(natoms_alloc + 1):
+                Gi_3D_dev2[i][j].append(0.0)
+
+    for i in range(mG_dim + 1):
+        Gi_3D_dev3.append([])
+        for j in range(nbrs_per_atom + 1):
+            Gi_3D_dev3[i].append([])
+            for k in range(natoms_alloc + 1):
+                Gi_3D_dev3[i][j].append(0.0)
+
+    for i in range(max_ls + 1):
+        dfuN_dev.append([])
+        for j in range(net_layers - 2 + 1):
+            dfuN_dev[i].append([])
+            for k in range(natoms_alloc + 1):
+                dfuN_dev[i][j].append(0.0)
+
+    for i in range(max_ls + 1): U1f1.append(0)
+    for i in range(max_ls + 1): U1f2.append(0)
+    for i in range(max_ls + 1): U1f3.append(0)
+    for i in range(max_ls + 1): U2f1.append(0)
+    for i in range(max_ls + 1): U2f2.append(0)
+    for i in range(max_ls + 1): U2f3.append(0)
+
+    for i in range(3 + 1):
+        dBOP_param_dxij_.append([])
+        for j in range(lnodes + 1):
+            dBOP_param_dxij_[i].append([])
+            for k in range(nbrs_per_atom + 1):
+                dBOP_param_dxij_[i][j].append([])
+                for l in range(natoms_alloc + 1):
+                    dBOP_param_dxij_[i][j][k].append(0.0)
+
+    r0Rc = []
+    r0pRc = []
+    for i in range(n_set_ann + 1): r0Rc.append(0)
+    for i in range(n_set_ann + 1): r0pRc.append(0)
+
+    ierror = 0
+    for i in range(1, 17 + 1):
+        ierror = ierror + ialloc[i]
+    if ierror != 0:
+        print('ERROR allocating x in alloc_atoms_ANN')
+        ihalt = 1
+
+
+"""
+!						! alloc_atoms_ANN !
+! ---------------------------------------------------------------------
+!						! deall_atoms_ANN !
+"""
+
+
+def deall_atoms_ANN(ierror):
+    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
+    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
+    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
+    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
+    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
+    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+
+    ialloc = []
+    for i in range(17 + 1): ialloc.append(0)
+
+    dBOP_param_dxij = []
+
+    Gi_atom = []
+    dG_i = []
+    Gi_list = []
+
+    U1 = []
+    U2 = []
+
+    Gi_new = []
+
+    xr_ij0 = []
+    xr_ij1 = []
+    xr_ij2 = []
+    xr_ij3 = []
+    fsij_dev = []
+    dfs_rij_3D1 = []
+    dfs_rij_3D2 = []
+    dfs_rij_3D3 = []
+    Gi_dev = []
+    Gi_3D_dev1 = []
+    Gi_3D_dev2 = []
+    Gi_3D_dev3 = []
+    dfuN_dev = []
+    U1f1 = []
+    U2f1 = []
+    dBOP_param_dxij_ = []
+    r0Rc = []
+
+    ierror = 0
+    for i in range(1, 17 + 1):
+        ierror = ierror + ialloc[i]
+
+
+"""
+!						! deall_atoms_ANN !
+! ------------------------------------------------------------------
+!
+"""
+
+# u END MODULE  ! BOP !
