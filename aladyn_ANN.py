@@ -72,11 +72,16 @@ import numpy as np
 import random
 import torch
 import math
-import aladyn_sys
-import aladyn_mods
-import aladyn_MD
-import aladyn_IO
-import aladyn
+#import aladyn_sys
+import atoms
+import sim_box
+import constants
+import pot_module
+import node_conf
+import group_conf
+#import aladyn_MD
+#import aladyn_IO
+#import aladyn
 
 
 #
@@ -220,10 +225,12 @@ def input_pot_ANN(ipot_type, ierror):
     err_msg = ' '  # character*200
     ierror = 0
 
-    nunit = open(filename[1], "r")  # open (nunit,file=filename(1),status='old')
+    print("debug yann file name as in ANN 228: ", pot_module.filename)
+
+    nunit = open(pot_module.filename, "r")  # open (nunit,file=filename(1),status='old')
 
     print(' ')
-    print(' READING pot file: ' + filename[1] + '...')  # ./ANN.DAT
+    print(' READING pot file: ' , pot_module.filename , '...')  # ./ANN.DAT
 
     """
     ! *** Start reading the Artificial Neural Network file *.ann ***
@@ -236,7 +243,7 @@ def input_pot_ANN(ipot_type, ierror):
     """
 
     LINE = nunit.readline()  # LINE  ! 2nd Line !
-    net_atom_types = LINE[1]  # LINE = " 1 - number of chemical species in the system"  ! number of chemical elem. !
+    net_atom_types = int(LINE[1])  # LINE = " 1 - number of chemical species in the system"  ! number of chemical elem. !
 
     # -
     elem_symb_pot.append('')  # first empty pos
@@ -253,25 +260,25 @@ def input_pot_ANN(ipot_type, ierror):
 
     print(' ')
     print('Elements in ANN potential file:')
-    print(elem_symb_pot + '' + net_atom_types)
+    print(elem_symb_pot , ' ' , net_atom_types)
 
-    for i in range(1, iatom_types + 1):  # ! element from pot.dat file !
+    for i in range(1, atoms.iatom_types + 1):  # ! element from pot.dat file !
         ierror = 1  # ! assume element not found  !
         for n in range(1, net_atom_types + 1):  # ! element from lammps pot file !
-            nelem = numb_elem_Z(elem_symb_pot[n])
-            if nelem == ielement[i]:
-                ipot[n] = i  # ! so that ielement(ipot(n)) = ielement(i) !
+            nelem = pot_module.numb_elem_Z(elem_symb_pot[n])
+            if nelem == pot_module.ielement[i]:
+                pot_module.ipot[n] = i  # ! so that ielement(ipot(n)) = ielement(i) !
                 ierror = 0
         if (ierror != 0):
-            print(elem_symb[i] + '' + filename[1])
+            print(elem_symb[i] , '' , pot_module.filename)
     print(' ')
 
-    err_msg = 'ERROR elements in ANN pot file do not match' + 1 + ' those in the pot.dat file!'  # LNS
+    err_msg = 'ERROR elements in ANN pot file do not match' , 1 , ' those in the pot.dat file!'  # LNS
     print(err_msg)
 
-    error_check(ierror, err_msg)
+    sim_box.error_check(ierror, err_msg)
 
-    if mynod == 0:
+    if sim_box.mynod == 0:
 
         LINE = nunit.readline()  # 0 0.100000 6.000000 1.500000 1.000000 1 ! 1st NN-data Line !
         myData = LINE.split()
@@ -299,9 +306,9 @@ def input_pot_ANN(ipot_type, ierror):
 
             else:
                 ierr = 1;
-                print('ERROR: No Gaussian positions in line 2 in ' + filename(1))
+                print('ERROR: No Gaussian positions in line 2 in ' , pot_module.filename)
             if ierr == 0:
-                print(n_set_ann + ' ' + r0_value)
+                print(n_set_ann , ' ' , r0_value)
 
         LINE = nunit.readline()  # ! 3rd NN-data Line !
 
@@ -316,23 +323,23 @@ def input_pot_ANN(ipot_type, ierror):
 
                 net_in = Nodes_of_layer[1]
                 net_out = Nodes_of_layer[net_layers]
-                net_in_check = 5 * n_set_ann * iatom_types
+                net_in_check = 5 * n_set_ann * atoms.iatom_types
                 if net_in != net_in_check:
                     ierr = 1
-                    print(net_in + ' ' + net_in_check + ' ' + n_set_ann + ' ' + iatom_types)
+                    print(net_in , ' ' , net_in_check , ' ' , n_set_ann , ' ' , atoms.iatom_types)
             else:
                 ierr = 1
-                print('ERROR: Incorect Net layers in line 3 in ' + filename(1))
-                print(net_layers + ' ' + Max_net_layers)
-                print('Number of Net layers = ' + i3 + ' must be between 1 and ' + i2)
+                print('ERROR: Incorect Net layers in line 3 in ' , pot_module.filename)
+                print(net_layers , ' ' , Max_net_layers)
+                print('Number of Net layers = ' , i3 , ' must be between 1 and ' , i2)
 
             if ierr == 0:
-                print(net_layers + ' ' + Nodes_of_layer)
+                print(net_layers , ' ' , Nodes_of_layer)
                 """
                 !	 write(6,20) net_atom_types, net_in, net_out, Rc_ann, d_ann
                 """
-    error_check(ierr, 'ERROR reading ANN file in input_pot_ANN')
-    error_check(net_atom_types - iatom_types, 'ERROR: Elements in ANN file and pot.dat do not match!')
+    sim_box.error_check(ierr, 'ERROR reading ANN file in input_pot_ANN')
+    sim_box.error_check(net_atom_types - atoms.iatom_types, 'ERROR: Elements in ANN file and pot.dat do not match!')
 
     if iPOT_file_ver == 0 or iPOT_file_ver == 1:
         ActFunc_shift = 0.0  # ! f(x) = 1/(1+exp(-x)) !
@@ -346,10 +353,10 @@ def input_pot_ANN(ipot_type, ierror):
         # r0G_value(:) = r0_value(:)/Gauss_ann
         r0G_value.append(r0_value[i] / Gauss_ann)
 
-    error_check(ierr, 'ERROR allocate r0G_value in input_pot_ANN')
+    sim_box.error_check(ierr, 'ERROR allocate r0G_value in input_pot_ANN')
 
     alloc_types_ANN(ierr)
-    error_check(ierr, 'ERROR alloc_types_ANN in input_pot_ANN')
+    sim_box.error_check(ierr, 'ERROR alloc_types_ANN in input_pot_ANN')
 
     ierr = 0
     ww = 0.0
@@ -359,6 +366,7 @@ def input_pot_ANN(ipot_type, ierror):
     ! --- Read Input Layer Parameters for atom of type itype ---
     """
     Ncolumns = Nodes_of_layer[1]  # ! 60 !
+    print("debut yann, Ncolumns: ", Ncolumns)
     Nraws = Nodes_of_layer[2]  # ! 20 !
     W1_ann.append([])  # first empty pos
     for icol in range(1, Ncolumns + 1):  # ! 1.. 60 !
@@ -370,10 +378,10 @@ def input_pot_ANN(ipot_type, ierror):
             myData = LINE.split()  # 4.07328794e-01  0.0000
 
             if ierr == 0:
-                print("debug159")
                 W1_ann[icol].append(float(myData[0]))
                 # a quoi ça sert ça? c'est toujours 0.0
                 dumb = float(myData[1])
+    print("debut yann W1ann taille: ", len(W1_ann))
 
     B1_ann.append(0.0)  # first empty pos
     for iraw in range(1, Nraws + 1):
@@ -381,7 +389,7 @@ def input_pot_ANN(ipot_type, ierror):
         LINE = nunit.readline()  # ! ANN Line !1207-1226
         myData = LINE.split()
         if ierr == 0:
-            print("debug160")
+
             B1_ann.append(float(myData[0]))
             # a quoi ça sert ça? c'est toujours 0.0
             dumb = float(myData[1])
@@ -409,7 +417,6 @@ def input_pot_ANN(ipot_type, ierror):
             for iraw in range(1, Nraws + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
                 LINE = nunit.readline()  # ! ANN Line !1227-1386
                 if ierr == 0:
-                    print("debug161")
                     myData = LINE.split()
                     ww = float(myData[0])
                 W2_ann[icol][iraw][layer] = ww
@@ -437,7 +444,6 @@ def input_pot_ANN(ipot_type, ierror):
             myData = LINE.split()
 
             if ierr == 0:
-                print("debug162")
                 W3_ann[icol].append(float(myData[0]))
                 # a quoi ça sert ça? c'est toujours 0.0
                 dumb = float(myData[1])
@@ -447,14 +453,13 @@ def input_pot_ANN(ipot_type, ierror):
         LINE = nunit.readline()  # ! ANN Line ! 1555 - 1562
         myData = LINE.split()
         if ierr == 0:
-            print("debug163")
             B3_ann.append(float(myData[0]))
             # a quoi ça sert ça? c'est toujours 0.0
             dumb = float(myData[1])
 
     nunit.close()
 
-    error_check(ierr, 'ERROR reading W_ann and B_ann arrays')
+    sim_box.error_check(ierr, 'ERROR reading W_ann and B_ann arrays')
 
     """
     ! Swap index order from (n_set,l,...) to (l,n_set,...) of
@@ -468,10 +473,12 @@ def input_pot_ANN(ipot_type, ierror):
         for j in range(Nraws + 1):
             WT_ann[i].append(0.0)
 
-    # WT_ann(:,:) = W1_ann(:,:) # ces tableaux ont la meme dimension
+
+    print ("debug yann taille avant mise en commun W1: ",len(W1_ann) ,"WT: ",len(WT_ann))
     for i in range(len(W1_ann)):
-        for j in range(len(W1_ann[i])):
-            WT_ann[i][j] = W1_ann[i][j]
+        for j in range(1,len(W1_ann[i])):
+            WT_ann[i].append(W1_ann[i][j])
+
 
     for l in range(0, 4 + 1):
         for n_set in range(1, n_set_ann + 1):
@@ -483,7 +490,7 @@ def input_pot_ANN(ipot_type, ierror):
             for i in range(len(W1_ann[icol])):
                 # W1_ann(icol,:) = WT_ann(ind,:)
                 W1_ann[icol][i] = WT_ann[ind][i]
-
+    print ("debug yann taille apres mise en commun W1: ",len(W1_ann) ,"WT: ",len(WT_ann))
     WT_ann = []
     ierror = ierr  # surement inutile.
 
@@ -520,11 +527,11 @@ def init_param_ANN():
     """
     r_cut_off = 0.0
 
-    mG_dim = (iatom_types * (iatom_types + 1) * n_set_ann * 5) / 2
-    max_tri_index = (iatom_types * (iatom_types + 1)) / 2  # ! Upper triang. !
+    mG_dim = (atoms.iatom_types * (atoms.iatom_types + 1) * n_set_ann * 5) / 2
+    max_tri_index = (atoms.iatom_types * (atoms.iatom_types + 1)) / 2  # ! Upper triang. !
 
     if mG_dim != Nodes_of_layer[1]:
-        error_check(1, 'ERROR dim. of Gis not equal to Nodes_of_layer(1)...')
+        sim_box.error_check(1, 'ERROR dim. of Gis not equal to Nodes_of_layer(1)...')
 
     d4_ann = d_ann ** 4  # puissance 4
     r_cut_off = Rc_ann
@@ -574,11 +581,11 @@ def Frc_ANN_OMP(ecohe):
     fr = [0] * 10  # double , dim 1, taille 9 but why 9??? 3 suffirait
     dcos_ijk = [0] * 4  # double , dim 1, taille 3
 
-    if ihalt != 0:
+    if sim_box.ihalt != 0:
         return
 
     if ireport > 0:
-        print(mG_dim + ' ' + n_set_ann + ' ' + max_nbrs)
+        print(mG_dim , ' ' , n_set_ann , ' ' , max_nbrs)
     # f  format('Frc_ANN_OMP(mG_dim=',i3,' n_set_ann=',i3,1 ' max_nbrs=',i3,')')
 
     ecohe = 0.0
@@ -1014,7 +1021,7 @@ def Frc_ANN_ACC(ecohe):
     ialloc = []
     for i in range(10 + 1): ialloc.append(0)
 
-    if ihalt != 0:
+    if sim_box.ihalt != 0:
         return
 
     """
@@ -1045,8 +1052,8 @@ def Frc_ANN_ACC(ecohe):
     if nACC_devices > 0:
         if memory_request > My_GPU_free_mem:
             print("Erreur ligne 914 _ANN: memory_request>My_GPU_free_mem")
-            print(memory_request + " " + My_GPU_free_mem + " " + My_GPU + " " + mynod)
-            ihalt = 1
+            print(memory_request , " " , My_GPU_free_mem , " " , My_GPU , " " , sim_box.mynod)
+            sim_box.ihalt = 1
             return
 
     # f 13   format(/,'ERROR: Requested memory in Frc_ANN_ACC is:',i6,
@@ -1121,7 +1128,7 @@ def Frc_ANN_ACC(ecohe):
         ierr = ierr + ialloc[i]
     if ierr != 0:
         print('ERROR allocating x in Frc_ANN_ACC')
-        ihalt = 1
+        sim_box.ihalt = 1
         return
 
     ecohe = 0.0
@@ -1544,7 +1551,7 @@ def Frc_ANN_ACC(ecohe):
         ierr = ierr + ialloc[i]
     if ierr != 0:
         print('ERROR deallocating x in Frc_ANN_ACC')
-        ihalt = 1
+        sim_box.ihalt = 1
 
 
 """
@@ -1581,7 +1588,7 @@ def alloc_types_ANN(ierror):
     Nraws3 = Nodes_of_layer[net_layers]
 
     nbuf_dim = Ncols1 * Nraws1 + (net_layers - 2) * max_cols * max_raws + Ncols3 * Nraws3
-
+    """
     for i in range(Ncols1 + 1):
         W1_ann.append([])
         for j in range(Nraws1 + 1):
@@ -1609,7 +1616,7 @@ def alloc_types_ANN(ierror):
     for i in range(Nraws3 + 1): B3_ann.append(0.0)
 
     for i in range(nbuf_dim + 1): buf_ann.append(0.0)
-
+    """
     ierror = 0
     for i in range(1, 7 + 1):
         ierror = ierror + ialloc[i]
@@ -1812,7 +1819,7 @@ def alloc_atoms_ANN(ierror):
         ierror = ierror + ialloc[i]
     if ierror != 0:
         print('ERROR allocating x in alloc_atoms_ANN')
-        ihalt = 1
+        sim_box.ihalt = 1
 
 
 """

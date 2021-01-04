@@ -10,10 +10,10 @@
 #
 # Source Files:
 #    aladyn_sys.py   - system module
-#    aladyn_mods.py  - contains general purpose moduli
+#    py  - contains general purpose moduli
 #    aladyn_IO.py    - I/O operations
 #    aladyn_ANN.py   - Artificial Neural Network calculations
-#    aladyn_MD.py    - Molecular Dynamics integrator and subroutines
+#    py    - Molecular Dynamics integrator and subroutines
 #    aladyn.py       - Main program
 #
 # Compilation:
@@ -38,10 +38,10 @@
 #
 # Source Files: 
 #    aladyn_sys.f   - system module
-#    aladyn_mods.f  - contains general purpose moduli
+#    f  - contains general purpose moduli
 #    aladyn_IO.f    - I/O operations
 #    aladyn_ANN.f   - Artificial Neural Network calculations
-#    aladyn_MD.f    - Molecular Dynamics integrator and subroutines
+#    f    - Molecular Dynamics integrator and subroutines
 #    aladyn.f       - Main program
 #
 # Compilation: use makefile  (type make)
@@ -101,9 +101,19 @@ import numpy as np
 import random
 import torch
 import math
+
 import aladyn_sys
-import aladyn_mods
-import aladyn_MD
+import sys_ACC
+
+import atoms
+import sim_box
+import constants
+import pot_module
+import node_conf
+import group_conf
+
+import MD
+
 import aladyn_IO
 import aladyn_ANN
 
@@ -122,15 +132,15 @@ def PROGRAM_END(ierr):
 
     ierror = 0
 
-    ierror = aladyn_mods.atoms.deall_atoms_sys(ierror)
-    ierror = aladyn_mods.atoms.deall_atoms_MD(ierror)
+    ierror = atoms.deall_atoms_sys(ierror)
+    ierror = atoms.deall_atoms_MD(ierror)
 
     aladyn_ANN.deall_types_ANN(ierror)
     aladyn_ANN.deall_atoms_ANN(ierror)
 
-    ierror = aladyn_mods.sim_box.deall_buffers(ierror)
-    ierror = aladyn_mods.pot_module.deall_pot_types(ierror)
-    ierror = aladyn_mods.sim_box.deall_cells(ierror)
+    ierror = sim_box.deall_buffers(ierror)
+    ierror = pot_module.deall_pot_types(ierror)
+    ierror = sim_box.deall_cells(ierror)
 
     if ierr != 0:
         sys.exit("")    # ! PROGRAM_END was called due to an error !
@@ -151,12 +161,12 @@ def report(jstep):
     # ! *** temperature and energy
     # !
 
-    epot = aladyn_mods.pot_module.PotEnrg_glb / aladyn_mods.sim_box.natoms
-    aladyn_MD.MD.get_T()
-    etott = epot + aladyn_mods.sim_box.Ek_sys
+    epot = pot_module.PotEnrg_glb / sim_box.natoms
+    MD.get_T()
+    etott = epot + sim_box.Ek_sys
 
-    print(jstep, ' t=', aladyn_mods.sim_box.real_time, ' ps, Ep=', epot, ' + Ek=', aladyn_mods.sim_box.Ek_sys,
-          ' = Etot=', etott, ' eV/atom,   Tsys=', aladyn_mods.sim_box.T_sys, ' K')
+    print(jstep, ' t=', sim_box.real_time, ' ps, Ep=', epot, ' + Ek=', sim_box.Ek_sys,
+          ' = Etot=', etott, ' eV/atom,   Tsys=', sim_box.T_sys, ' K')
 
     return
     # ! End of report !
@@ -173,29 +183,29 @@ def link_cell_setup():
     # ! subroutine to set up a cell structure in which to assign atoms
     # !
 
-    ncell_per_node_old = aladyn_mods.sim_box.ncell_per_node
+    ncell_per_node_old = sim_box.ncell_per_node
 
     # ! Parallel values               ! 1D, Serial values        !
     mynodZ = 0
     mynodY = 0
 
-    ncZ_per_node = aladyn_mods.sim_box.nnz
+    ncZ_per_node = sim_box.nnz
     lZstart = 0
-    lZend = aladyn_mods.sim_box.nnz - 1
-    iZ_shift = aladyn_mods.sim_box.nnz
-    ncY_per_node = aladyn_mods.sim_box.nny
+    lZend = sim_box.nnz - 1
+    iZ_shift = sim_box.nnz
+    ncY_per_node = sim_box.nny
     lYstart = 0
-    lYend = aladyn_mods.sim_box.nny - 1
-    iY_shift = aladyn_mods.sim_box.nny
-    nXYlayer = aladyn_mods.sim_box.nnx * aladyn_mods.sim_box.nny
-    ncell_per_node = aladyn_mods.sim_box.nnx * aladyn_mods.sim_box.nny * aladyn_mods.sim_box.nnz
+    lYend = sim_box.nny - 1
+    iY_shift = sim_box.nny
+    nXYlayer = sim_box.nnx * sim_box.nny
+    ncell_per_node = sim_box.nnx * sim_box.nny * sim_box.nnz
 
     # !     write(6, 10) nodes_on_Y, ncell_per_node
     # ! 10 format('link_cell_setup: nodes_on_Y=', i2, ' ncell_per_node=', i5)
 
-    cellix = float(aladyn_mods.sim_box.nnx)
-    celliy = float(aladyn_mods.sim_box.nny)
-    celliz = float(aladyn_mods.sim_box.nnz)
+    cellix = float(sim_box.nnx)
+    celliy = float(sim_box.nny)
+    celliz = float(sim_box.nnz)
 
     ncell_per_node = (ncell_per_node / 8 + 1) * 8
 
@@ -218,9 +228,9 @@ def link_cell_setup():
     km1ZY = 0
 
     if ncell_per_node.gt.ncell_per_node_old:
-        if not aladyn_mods.sim_box.id_of_cell:
-            aladyn_mods.sim_box.alloc_cells(ierror)  # ! alloc_ates cells in aladyn_mods !
-            aladyn_mods.sim_box.error_check(ierror, 'ERROR in alloc_cells...')
+        if sim_box.id_of_cell is None:
+            sim_box.alloc_cells(ierror)  # ! alloc_ates cells in aladyn_mods !
+            sim_box.error_check(ierror, 'ERROR in alloc_cells...')
 
     # !
     # ! Collect cell ids and indices for use in get_neighbors
@@ -230,26 +240,26 @@ def link_cell_setup():
 
     for iz in range(lZstart, lZend + 1):
         izz = iz + iZ_shift
-        iz_nr = izz % aladyn_mods.sim_box.nnz
+        iz_nr = izz % sim_box.nnz
 
-        if aladyn_mods.sim_box.nodes_on_Y == 1:  # ! 1D node topology !
-            for iy in range(0, aladyn_mods.sim_box.nny - 1 + 1):
-                iyy = iy + aladyn_mods.sim_box.nny
-                iy_nr = iyy % aladyn_mods.sim_box.nny
-                for ix in range(0, aladyn_mods.sim_box.nnx - 1 + 1):
+        if sim_box.nodes_on_Y == 1:  # ! 1D node topology !
+            for iy in range(0, sim_box.nny - 1 + 1):
+                iyy = iy + sim_box.nny
+                iy_nr = iyy % sim_box.nny
+                for ix in range(0, sim_box.nnx - 1 + 1):
                     k = k + 1
-                    ixx = ix + aladyn_mods.sim_box.nnx
-                    aladyn_mods.sim_box.id_of_cell[k] = iz_nr * nXYlayer + iy_nr * aladyn_mods.sim_box.nnx + \
-                                                        (ixx % aladyn_mods.sim_box.nnx)
+                    ixx = ix + sim_box.nnx
+                    sim_box.id_of_cell[k] = iz_nr * nXYlayer + iy_nr * sim_box.nnx + \
+                                                        (ixx % sim_box.nnx)
         else:  # ! 2D node topology !
             for iy in range(lYstart, lYend + 1):
                 iyy = iy + iY_shift
-                iy_nr = iyy % aladyn_mods.sim_box.nny
-                for ix in range(0, aladyn_mods.sim_box.nnx - 1 + 1):
+                iy_nr = iyy % sim_box.nny
+                for ix in range(0, sim_box.nnx - 1 + 1):
                     k = k + 1
-                    ixx = ix + aladyn_mods.sim_box.nnx
-                    aladyn_mods.sim_box.id_of_cell[k] = iz_nr * nXYlayer + iy_nr * aladyn_mods.sim_box.nnx + \
-                                                        (ixx % aladyn_mods.sim_box.nnx)
+                    ixx = ix + sim_box.nnx
+                    sim_box.id_of_cell[k] = iz_nr * nXYlayer + iy_nr * sim_box.nnx + \
+                                                        (ixx % sim_box.nnx)
         # ! if (nodes_on_Y.eq.1)... !
 
     ncells_all = k
@@ -264,9 +274,9 @@ def link_cell_setup():
 def nodeRight_of(node):
     # use sim_box
 
-    node_Z = node / aladyn_mods.sim_box.nodes_on_Y
-    node_Y = node % aladyn_mods.sim_box.nodes_on_Y
-    nodeRight_of =  node_Z * aladyn_mods.sim_box.nodes_on_Y + ((node_Y + 1) % aladyn_mods.sim_box.nodes_on_Y)
+    node_Z = node / sim_box.nodes_on_Y
+    node_Y = node % sim_box.nodes_on_Y
+    nodeRight_of =  node_Z * sim_box.nodes_on_Y + ((node_Y + 1) % sim_box.nodes_on_Y)
 
     return
     # ! End of nodeRight_of(node) !
@@ -278,10 +288,10 @@ def nodeRight_of(node):
 def nodeLeft_of(node):
     # use sim_box
 
-    node_Z = node / aladyn_mods.sim_box.nodes_on_Y
-    node_Y = node % aladyn_mods.sim_box.nodes_on_Y
-    nodeLeft_of = node_Z * aladyn_mods.sim_box.nodes_on_Y + \
-                  ((node_Y - 1 + aladyn_mods.sim_box.nodes_on_Y) % aladyn_mods.sim_box.nodes_on_Y)
+    node_Z = node / sim_box.nodes_on_Y
+    node_Y = node % sim_box.nodes_on_Y
+    nodeLeft_of = node_Z * sim_box.nodes_on_Y + \
+                  ((node_Y - 1 + sim_box.nodes_on_Y) % sim_box.nodes_on_Y)
 
     return
     # ! End of nodeLeft_of(node) !
@@ -293,10 +303,10 @@ def nodeLeft_of(node):
 def nodeDown_of(node):
     # use sim_box
 
-    node_Z = node / aladyn_mods.sim_box.nodes_on_Y
-    node_Y = node % aladyn_mods.sim_box.nodes_on_Y
-    nodeDown_of = ((node_Z - 1 + aladyn_mods.sim_box.nodes_on_Z) % aladyn_mods.sim_box.nodes_on_Z) * \
-                  aladyn_mods.sim_box.nodes_on_Y + node_Y
+    node_Z = node / sim_box.nodes_on_Y
+    node_Y = node % sim_box.nodes_on_Y
+    nodeDown_of = ((node_Z - 1 + sim_box.nodes_on_Z) % sim_box.nodes_on_Z) * \
+                  sim_box.nodes_on_Y + node_Y
 
     return
     # ! End of nodeDown_of(node) !
@@ -308,9 +318,9 @@ def nodeDown_of(node):
 def nodeUp_of(node):
     # use sim_box
 
-    node_Z = node / aladyn_mods.sim_box.nodes_on_Y
-    node_Y = node % aladyn_mods.sim_box.nodes_on_Y
-    nodeUp_of = ((node_Z + 1) % aladyn_mods.sim_box.nodes_on_Z) * aladyn_mods.sim_box.nodes_on_Y + node_Y
+    node_Z = node / sim_box.nodes_on_Y
+    node_Y = node % sim_box.nodes_on_Y
+    nodeUp_of = ((node_Z + 1) % sim_box.nodes_on_Z) * sim_box.nodes_on_Y + node_Y
 
     return
     # ! End of nodeUp_of(node) !
@@ -328,36 +338,36 @@ def get_neighbors():
     # use atoms
     # use pot_module
 
-    ll_nbr = [0] * aladyn_mods.sim_box.natoms_per_cell3
+    ll_nbr = [0] * sim_box.natoms_per_cell3
 
     # !
     # ! do loop over all cells
     # !
 
-    h11 = aladyn_mods.sim_box.h[1][1]
-    h12 = aladyn_mods.sim_box.h[1][2]
-    h13 = aladyn_mods.sim_box.h[1][3]
-    h22 = aladyn_mods.sim_box.h[2][2]
-    h23 = aladyn_mods.sim_box.h[2][3]
-    h33 = aladyn_mods.sim_box.h[3][3]
+    h11 = sim_box.h[1][1]
+    h12 = sim_box.h[1][2]
+    h13 = sim_box.h[1][3]
+    h22 = sim_box.h[2][2]
+    h23 = sim_box.h[2][3]
+    h33 = sim_box.h[3][3]
 
-    for i in range(1, aladyn_mods.sim_box.natoms + 1):
-        for j in range(0, aladyn_mods.sim_box.nbrs_per_atom + 1):
-            aladyn_mods.atoms.nbr_list[j][i] = i  # ! Initial state: all nbrs are self - nbrs !
+    for i in range(1, sim_box.natoms + 1):
+        for j in range(0, sim_box.nbrs_per_atom + 1):
+            atoms.nbr_list[j][i] = i  # ! Initial state: all nbrs are self - nbrs !
 
     max_nbrs = 0
-    sz0_cut = aladyn_mods.pot_module.r_cut_off / h33
+    sz0_cut = pot_module.r_cut_off / h33
 
-    for ic in range(1, aladyn_mods.sim_box.ncells_all + 1):  # ! Each ic is independent !
-        icell = aladyn_mods.sim_box.id_of_cell[ic]
-        iz_nr = icell / aladyn_mods.sim_box.nXYlayer
-        iyx = icell % aladyn_mods.sim_box.nXYlayer
-        iy_nr = iyx / aladyn_mods.sim_box.nnx
-        ixx = (iyx % aladyn_mods.sim_box.nnx) + aladyn_mods.sim_box.nnx
+    for ic in range(1, sim_box.ncells_all + 1):  # ! Each ic is independent !
+        icell = sim_box.id_of_cell[ic]
+        iz_nr = icell / sim_box.nXYlayer
+        iyx = icell % sim_box.nXYlayer
+        iy_nr = iyx / sim_box.nnx
+        ixx = (iyx % sim_box.nnx) + sim_box.nnx
 
-        nr_in_cell = aladyn_mods.sim_box.natoms_in_cell[icell]  # ! number atoms in icell !
+        nr_in_cell = sim_box.natoms_in_cell[icell]  # ! number atoms in icell !
         for n in range(1, nr_in_cell + 1):  # ! VECTORIZED: speedup: 4.760 !
-            ll_nbr[n] = aladyn_mods.sim_box.n_in_cell[n][icell]
+            ll_nbr[n] = sim_box.n_in_cell[n][icell]
 
         l_in_cell = nr_in_cell
 
@@ -369,16 +379,16 @@ def get_neighbors():
         # !
 
         for izl in range(-1, 1 + 1):
-            kzn = ((iz_nr + aladyn_mods.sim_box.nnz + izl) % aladyn_mods.sim_box.nnz) * aladyn_mods.sim_box.nXYlayer
+            kzn = ((iz_nr + sim_box.nnz + izl) % sim_box.nnz) * sim_box.nXYlayer
             for iyl in range(-1, 1 + 1):
-                jyn = kzn + ((iy_nr + aladyn_mods.sim_box.nny + iyl) % aladyn_mods.sim_box.nny) * \
-                      aladyn_mods.sim_box.nnx
+                jyn = kzn + ((iy_nr + sim_box.nny + iyl) % sim_box.nny) * \
+                      sim_box.nnx
                 for i in range(-1, 1 + 1):
-                    jcell = jyn + ((i + ixx) % aladyn_mods.sim_box.nnx)
+                    jcell = jyn + ((i + ixx) % sim_box.nnx)
                     if jcell != icell:
-                        ns = aladyn_mods.sim_box.natoms_in_cell[jcell]  # ! number atoms in jcell !
+                        ns = sim_box.natoms_in_cell[jcell]  # ! number atoms in jcell !
                         for n in range(1, ns + 1):  # ! VECTORIZED: speedup: 4.760 !
-                            ll_nbr[l_in_cell + n] = aladyn_mods.sim_box.n_in_cell[n][jcell]  # ! atom n in jcell !
+                            ll_nbr[l_in_cell + n] = sim_box.n_in_cell[n][jcell]  # ! atom n in jcell !
                         l_in_cell = l_in_cell + ns
                     # ! if (icell.ne.jcell)... !
                 # ! do i = -1, 1 !
@@ -393,29 +403,29 @@ def get_neighbors():
 
             nr = ll_nbr[n]
 
-            sxn = aladyn_mods.atoms.sx[nr]
-            syn = aladyn_mods.atoms.sy[nr]
-            szn = aladyn_mods.atoms.sz[nr]
+            sxn = atoms.sx[nr]
+            syn = atoms.sy[nr]
+            szn = atoms.sz[nr]
 
             k_all = 0  # ! no neighbors !
 
             # !!!!!DIR$ NOVECTOR
             for k in range(1, l_in_cell + 1):
                 l = ll_nbr[k]
-                sz0 = aladyn_mods.atoms.sz[l] - szn
+                sz0 = atoms.sz[l] - szn
                 if sz0 >= 0.5:          # ! make periodic along Z !
                     sz0 = sz0 - 1.0     # ! 2x faster than sz0 = sz0 - dnint(sz0) !
                 elif sz0 < - 0.5:
                     sz0 = sz0 + 1.0
                 if abs(sz0) < sz0_cut:
                     rz0 = h33 * sz0
-                    sy0 = aladyn_mods.atoms.sy[l] - syn
+                    sy0 = atoms.sy[l] - syn
                     if sy0 >= 0.5:          # ! make periodic along Y !
                         sy0 = sy0 - 1.0
                     elif sy0 < - 0.5:
                         sy0 = sy0 + 1.0
                     ry0 = h22 * sy0 + h23 * sz0
-                    sx0 = aladyn_mods.atoms.sx[l] - sxn
+                    sx0 = atoms.sx[l] - sxn
                     if sx0 >= 0.5:  # ! make periodic along X !
                         sx0 = sx0 - 1.0
                     elif sx0 < - 0.5:
@@ -423,9 +433,9 @@ def get_neighbors():
                     rx0 = h11 * sx0 + h12 * sy0 + h13 * sz0
                     r2 = rx0 ** 2 + ry0 ** 2 + rz0 ** 2
 
-                    if (r2 < aladyn_mods.pot_module.r2_cut_off) and (l != nr):
+                    if (r2 < pot_module.r2_cut_off) and (l != nr):
                         k_all = k_all + 1
-                        aladyn_mods.atoms.nbr_list[k_all][nr] = l
+                        atoms.nbr_list[k_all][nr] = l
                     # ! if (r2.lt.r2_cut_off)...
                 # ! if (abs(sz0).lt.r_cut_off)... !
             # ! do do k = 1, l_in_cell !
@@ -473,8 +483,8 @@ def force_global(ilong):
 
     # ! --- Sum Pot.Energy from all nodes ---
 
-    PotEnrg_glb = aladyn_mods.pot_module.ecoh
-    PotEnrg_atm = PotEnrg_glb / aladyn_mods.sim_box.natoms
+    PotEnrg_glb = pot_module.ecoh
+    PotEnrg_atm = PotEnrg_glb / sim_box.natoms
 
     # !     call PROGRAM_END(1)  ! VVVV !
 
@@ -504,7 +514,7 @@ def node_config():
 
     nflag = 0
     ierror = 0
-    nodes_on_Yo, nodes_on_Zo = aladyn_mods.sim_box.nodes_on_Y, aladyn_mods.sim_box.nodes_on_Z
+    nodes_on_Yo, nodes_on_Zo = sim_box.nodes_on_Y, sim_box.nodes_on_Z
     cell_size_X, cell_size_Y, cell_size_Z = 0.0, 0.0, 0.0
 
     i1, i2, i3 = 1, 2, 3
@@ -521,47 +531,49 @@ def node_config():
         print(' ')
         print('ERROR: Unable to construct a suitable link-cell grid!')
         print(' ')
-        print('System Box size:', aladyn_mods.sim_box.h[i1][i1], aladyn_mods.sim_box.h[i2][i2],
-              aladyn_mods.sim_box.h[i3][i3], ';   min. cell size=', aladyn_mods.sim_box.size)  # 2(f12.6,' x '),f12.6
+        print('System Box size:', sim_box.h[i1][i1], sim_box.h[i2][i2],
+              sim_box.h[i3][i3], ';   min. cell size=', sim_box.size)  # 2(f12.6,' x '),f12.6
         if (ierror & 1) > 0:
-            print(' Cells per node on X =', aladyn_mods.sim_box.nnx, '  must be  >   2: NO')
+            print(' Cells per node on X =', sim_box.nnx, '  must be  >   2: NO')
         else:
-            print(' Cells per node on X =', aladyn_mods.sim_box.nnx, '  must be  >   2: YES')
+            print(' Cells per node on X =', sim_box.nnx, '  must be  >   2: YES')
 
         if (ierror & 2) > 0:
-            print(' Cells per node on Y =', aladyn_mods.sim_box.nny, '  must be  > ', nny_min - 1, ': NO')
+            print(' Cells per node on Y =', sim_box.nny, '  must be  > ', nny_min - 1, ': NO')
         else:
-            print(' Cells per node on Y =', aladyn_mods.sim_box.nny, '  must be  > ', nny_min - 1, ': YES')
+            print(' Cells per node on Y =', sim_box.nny, '  must be  > ', nny_min - 1, ': YES')
 
         if (ierror & 4) > 0:
-            print(' Cells per node on Z =', aladyn_mods.sim_box.nnz, '  must be  > ', nnz_min - 1, ': NO')
+            print(' Cells per node on Z =', sim_box.nnz, '  must be  > ', nnz_min - 1, ': NO')
         else:
-            print(' Cells per node on Z =', aladyn_mods.sim_box.nnz, '  must be  > ', nnz_min - 1, ': YES')
+            print(' Cells per node on Z =', sim_box.nnz, '  must be  > ', nnz_min - 1, ': YES')
         print('Decrease number of nodes or increase system size...')
 
         PROGRAM_END(1)
 
     else:  # ! if(ierror.gt.0)... !
-        cell_size_X = aladyn_mods.sim_box.h[i1][i1] / aladyn_mods.sim_box.nnx
-        cell_size_Y = aladyn_mods.sim_box.h[i2][i2] / aladyn_mods.sim_box.nny
-        cell_size_Z = aladyn_mods.sim_box.h[i3][i3] / aladyn_mods.sim_box.nnz
+        cell_size_X = sim_box.h[i1][i1] / sim_box.nnx
+        cell_size_Y = sim_box.h[i2][i2] / sim_box.nny
+        cell_size_Z = sim_box.h[i3][i3] / sim_box.nnz
     # endif ! if(ierror.gt.0)... !
 
-    ncell = aladyn_mods.sim_box.nnx * aladyn_mods.sim_box.nny * aladyn_mods.sim_box.nnz
+    ncell = sim_box.nnx * sim_box.nny * sim_box.nnz
 
-    aladyn_mods.sim_box.matinv(aladyn_mods.sim_box.h, aladyn_mods.sim_box.hi, aladyn_mods.atoms.sys_vol)
-    atom_vol1 = aladyn_mods.atoms.sys_vol / aladyn_mods.sim_box.natoms
+    print("Debug yann cette valeur n'est pas transmise a Reading structure:", atoms.sys_vol)
+
+    sim_box.matinv(sim_box.h, sim_box.hi)
+    atom_vol1 = atoms.sys_vol / sim_box.natoms
 
     # ! Get the maximum possible number of atoms per link cell !
 
     rZ_min = 10.0  # ! Start max value in Ang. !
 
-    print('nelem_in_com=', aladyn_mods.pot_module.nelem_in_com)
+    print('nelem_in_com=', pot_module.nelem_in_com)
 
     # ! read el. types as listed in aladyn.com !
-    for i in range(1, aladyn_mods.pot_module.nelem_in_com + 1):
-        iZ = aladyn_mods.pot_module.iZ_elem_in_com[i]
-        rad_of_Z = aladyn_mods.pot_module.elem_radius[iZ]  # ! [Ang] !
+    for i in range(1, pot_module.nelem_in_com + 1):
+        iZ = pot_module.iZ_elem_in_com[i]
+        rad_of_Z = pot_module.elem_radius[iZ]  # ! [Ang] !
         if rad_of_Z < rZ_min:
             rZ_min = rad_of_Z
 
@@ -585,9 +597,9 @@ def node_config():
     natoms_per_cell3 = int(cell3_volume / atom_vol) + 1
     natoms_per_cell3 = (natoms_per_cell3 / 8 + 1) * 8
 
-    nflag = abs(aladyn_mods.sim_box.nnx - aladyn_mods.sim_box.nxold) + \
-            abs(aladyn_mods.sim_box.nny - aladyn_mods.sim_box.nyold) + \
-            abs(aladyn_mods.sim_box.nnz - aladyn_mods.sim_box.nzold) + \
+    nflag = abs(sim_box.nnx - sim_box.nxold) + \
+            abs(sim_box.nny - sim_box.nyold) + \
+            abs(sim_box.nnz - sim_box.nzold) + \
             abs(nodes_on_Y - nodes_on_Yo) + abs(nodes_on_Z - nodes_on_Zo)
 
     # !  reset cell grid if necessary
@@ -596,27 +608,27 @@ def node_config():
 
         print('\n', 'Link cell configuration:', '\n', ' axis nodes cells/n thickness; total cell:', ncell)
 
-        print('On X: ', 1, ' x ', aladyn_mods.sim_box.nnx, ' x ', cell_size_X)
+        print('On X: ', 1, ' x ', sim_box.nnx, ' x ', cell_size_X)
         print('On Y: ', nodes_on_Y, ' x ', nny_cell, ' x ', cell_size_Y)
         print('On Z: ', nodes_on_Z, ' x ', nnz_cell, ' x ', cell_size_Z)
 
         print(' ')
     # ! if (nflag.gt.0)... !
 
-    natoms_alloc_new = aladyn_mods.sim_box.natoms + 100
+    natoms_alloc_new = sim_box.natoms + 100
 
-    if natoms_alloc_new > aladyn_mods.sim_box.natoms_alloc:  # ! update natoms_alloc !
+    if natoms_alloc_new > sim_box.natoms_alloc:  # ! update natoms_alloc !
         natoms_alloc = (natoms_alloc_new / 64 + 1) * 64
-    cut_off_vol = 4.0 / 3.0 * 3.141592 * math.pow(aladyn_mods.pot_module.r_cut_off, 3)
+    cut_off_vol = 4.0 / 3.0 * 3.141592 * math.pow(pot_module.r_cut_off, 3)
     nbrs_per_atom = int(round(cut_off_vol / atom_vol))  # ! Correct one !
     print('nbrs_per_atom=', nbrs_per_atom)
-    nbrs_alloc = nbrs_per_atom * aladyn_mods.sim_box.natoms_alloc
+    nbrs_alloc = nbrs_per_atom * sim_box.natoms_alloc
 
-    nxold = aladyn_mods.sim_box.nnx
-    nyold = aladyn_mods.sim_box.nny
-    nzold = aladyn_mods.sim_box.nnz
+    nxold = sim_box.nnx
+    nyold = sim_box.nny
+    nzold = sim_box.nnz
 
-    if not aladyn_mods.atoms.ident:
+    if not atoms.ident:
         aladyn_IO.alloc_atoms()  # ! alloc_ates natoms_alloc atoms in aladyn_IO!
 
     return nflag
@@ -691,10 +703,10 @@ def nnd_fit(nodes_on_D, iD):
     # use sim_box
 
     nnd_min = 3
-    nnd_max = int(aladyn_mods.sim_box.h[iD][iD] / aladyn_mods.sim_box.size)
+    nnd_max = int(sim_box.h[iD][iD] / sim_box.size)
 
     nnd_tmp = 0
-    MC_rank_D = aladyn_mods.sim_box.MC_rank
+    MC_rank_D = sim_box.MC_rank
 
     for nnd in range(nnd_max, nnd_min - 1, -1):
 
@@ -705,7 +717,7 @@ def nnd_fit(nodes_on_D, iD):
             if nnd_rank == 0:
                 nnd_tmp = nnd  # ! good nnd found !
             while nnd_rank > 0:  # ! if doesn't do...         !
-                if(MC_rank_D < nnd_min) and (MC_rank_D < aladyn_mods.sim_box.MC_rank_max):
+                if(MC_rank_D < nnd_min) and (MC_rank_D < sim_box.MC_rank_max):
                     MC_rank_D = MC_rank_D + 1
                     nnd_rank = nnd % MC_rank_D  # ! check with new MC_rank_D !
                     if nnd_rank == 0:
@@ -744,17 +756,17 @@ def SIM_run():
     # use IO
     # use ANN
 
-    aladyn_MD.MD.init_vel(aladyn_mods.sim_box.T_set)
+    MD.init_vel(sim_box.T_set)
     force_global(1)  # ! err.check node_config finder !
-    aladyn_MD.MD.initaccel()  # ! sets accelerations using forces !
+    MD.initaccel()  # ! sets accelerations using forces !
 
     print(' ')
-    print('PotEnrg_atm=', aladyn_mods.pot_module.PotEnrg_atm)
-    print('Sys. Pot.En=', aladyn_mods.pot_module.PotEnrg_atm * aladyn_mods.sim_box.natoms)
+    print('PotEnrg_atm=', pot_module.PotEnrg_atm)
+    print('Sys. Pot.En=', pot_module.PotEnrg_atm * sim_box.natoms)
 
     report(0)  # ! Initial structure measurement !
 
-    BkT = 1.0 / (aladyn_mods.constants.Boltz_Kb * aladyn_mods.sim_box.T_sys)
+    BkT = 1.0 / (constants.Boltz_Kb * sim_box.T_sys)
 
     # !
     # !  ******************************************************************
@@ -764,30 +776,30 @@ def SIM_run():
 
     istep = 0
 
-    for kstep in range(1, aladyn_mods.sim_box.nstep + 1):  # ! MD loop !
+    for kstep in range(1, sim_box.nstep + 1):  # ! MD loop !
         istep = istep + 1
 
-        E1 = aladyn_mods.pot_module.PotEnrg_glb / aladyn_mods.sim_box.natoms
+        E1 = pot_module.PotEnrg_glb / sim_box.natoms
 
         # ! --- MD step start ---
-        real_time = aladyn_mods.sim_box.real_time + 1000.0 * aladyn_mods.atoms.dt_step  # ! [fs] MD run !
+        real_time = sim_box.real_time + 1000.0 * atoms.dt_step  # ! [fs] MD run !
 
-        aladyn_MD.MD.predict_atoms(ndof_flag)
+        MD.predict_atoms(ndof_flag)
 
         force_global(0)  # ! no node_config !
 
-        aladyn_MD.MD.correct_atoms(ndof_flag)  # ! calc.sumPxyz() !
-        aladyn_MD.MD.T_broadcast()  # ! Send A_fr, sumPxyz() and calc.pTemp(ntp) !
+        MD.correct_atoms(ndof_flag)  # ! calc.sumPxyz() !
+        MD.T_broadcast()  # ! Send A_fr, sumPxyz() and calc.pTemp(ntp) !
 
         # ! --- MD step end ---
 
-        if ((kstep % aladyn_mods.sim_box.measure_step) == 0) and (kstep < aladyn_mods.sim_box.nstep):
+        if ((kstep % sim_box.measure_step) == 0) and (kstep < sim_box.nstep):
             force_global(0)
             report(kstep)
 
     # ! do kstep = 1, nstep ! end of MD loop !
 
-    aladyn_mods.pot_module.get_chem()
+    pot_module.get_chem()
 
     # ! Calc.Final Energy w stress !
     force_global(0)  # ! calc atm stress !
@@ -830,15 +842,15 @@ def init_param():
     # !
 
     ibox_error = 0
-    if abs(2.0 * aladyn_mods.sim_box.h[1][2]) > aladyn_mods.sim_box.h[1][1]:
+    if abs(2.0 * sim_box.h[1][2]) > sim_box.h[1][1]:
         ibox_error = 1
-    if abs(2.0 * aladyn_mods.sim_box.h[1][3]) > aladyn_mods.sim_box.h[1][1]:
+    if abs(2.0 * sim_box.h[1][3]) > sim_box.h[1][1]:
         ibox_error = 2
-    if abs(2.0 * aladyn_mods.sim_box.h[1][3]) > aladyn_mods.sim_box.h[2][2]:
+    if abs(2.0 * sim_box.h[1][3]) > sim_box.h[2][2]:
         ibox_error = 3
-    if abs(2.0 * aladyn_mods.sim_box.h[2][3]) > aladyn_mods.sim_box.h[1][1]:
+    if abs(2.0 * sim_box.h[2][3]) > sim_box.h[1][1]:
         ibox_error = 4
-    if abs(2.0 * aladyn_mods.sim_box.h[2][3]) > aladyn_mods.sim_box.h[2][2]:
+    if abs(2.0 * sim_box.h[2][3]) > sim_box.h[2][2]:
         ibox_error = 5
     if ibox_error != 0:
         print('ERROR! Unacceptable h-matrix!')
@@ -854,38 +866,38 @@ def init_param():
             print('h(2,3) or xz must be less than (yhi-ylo)/2')
         PROGRAM_END(1)
 
-    aladyn_mods.sim_box.matinv(aladyn_mods.sim_box.h, aladyn_mods.sim_box.hi, dh)  # ! h * hi = I
+    sim_box.matinv(sim_box.h, sim_box.hi)  # ! h * hi = I
 
-    for ntp in range(1, aladyn_mods.atoms.iatom_types + 1):
-        aladyn_mods.pot_module.Am_of_type[ntp] = 0.0
-        aladyn_mods.pot_module.pTemp[ntp] = aladyn_mods.sim_box.T_sys
-        aladyn_mods.pot_module.E_kin[ntp] = 1.5 * aladyn_mods.constants.Boltz_Kb * aladyn_mods.sim_box.T_sys
+    for ntp in range(1, atoms.iatom_types + 1):
+        pot_module.Am_of_type[ntp] = 0.0
+        pot_module.pTemp[ntp] = sim_box.T_sys
+        pot_module.E_kin[ntp] = 1.5 * constants.Boltz_Kb * sim_box.T_sys
 
-    for n in range(1, aladyn_mods.sim_box.natoms + 1):
-        ntp = aladyn_mods.atoms.ntype[n]
-        aladyn_mods.pot_module.Am_of_type[ntp] = aladyn_mods.pot_module.Am_of_type[ntp] + \
-                                                 aladyn_mods.pot_module.amass[ntp]
+    for n in range(1, sim_box.natoms + 1):
+        ntp = atoms.ntype[n]
+        pot_module.Am_of_type[ntp] = pot_module.Am_of_type[ntp] + \
+                                                 pot_module.amass[ntp]
 
-    sum_mass = aladyn_mods.pot_module.Am_of_type
+    sum_mass = pot_module.Am_of_type
 
     avr_mass = 0.0
-    for iatom in range(1, aladyn_mods.atoms.iatom_types + 1):  # ! possible but inefficient vect. !
+    for iatom in range(1, atoms.iatom_types + 1):  # ! possible but inefficient vect. !
         avr_mass = avr_mass + sum_mass(iatom)
-    avr_mass = avr_mass / aladyn_mods.sim_box.natoms
+    avr_mass = avr_mass / sim_box.natoms
 
     # ! ** *set up the random number generator
 
     iseed = 6751
     # ! Convert the string 'str_filename' to a numeric value !
-    n = len(aladyn_mods.sim_box.str_filename)
+    n = len(sim_box.str_filename)
     for i in range(1, n + 1):
-        iseed = iseed + ord(aladyn_mods.sim_box.str_filename[i])
+        iseed = iseed + ord(sim_box.str_filename[i])
     # ! randomize with str_filename !
 
     iseed0 = iseed + 17
-    aladyn_mods.sim_box.rmarin(iseed0)  # ! node depndnt init.random generator
+    sim_box.rmarin(iseed0)  # ! node depndnt init.random generator
 
-    aladyn_MD.MD.init_MD()
+    MD.init_MD()
 
     return
     # ! End of init_param !
@@ -914,19 +926,19 @@ def read_pot():
     # use IO
     # use ANN
 
-    aladyn_mods.pot_module.init_elements()
+    pot_module.init_elements()
 
-    ierror = 1
+    ierror = 0
     aladyn_IO.read_pot_dat()  # ! get iatom_types, ifile_numbs, call alloc_types !
 
     # ! alloc_ates ANN types, alloc_ates ANN_BOP types !
-    aladyn_ANN.input_pot_ANN(aladyn_mods.pot_module.iPOT_func_type, ierror)
+    aladyn_ANN.input_pot_ANN(pot_module.iPOT_func_type, ierror)
 
-    aladyn_mods.sim_box.error_check(ierror, 'ERROR in read_pot...')
+    sim_box.error_check(ierror, 'ERROR in read_pot...')
 
     aladyn_ANN.init_param_ANN()  # ! rescales or initializes pot.param. !
     # ! for ANN_BOP, alloc_ates BOP types too !
-    aladyn_mods.sim_box.error_check(ihalt, 'ERROR in read_pot.')
+    sim_box.error_check(sim_box.ihalt, 'ERROR in read_pot.')
 
     return
     # ! End of read_pot !
@@ -946,12 +958,12 @@ def force(ienergy):
     # use IO
     # use ANN
 
-    if aladyn_mods.sim_box.I_have_GPU > 0:
-        aladyn_ANN.Frc_ANN_ACC(aladyn_mods.pot_module.ecoh)  # ! Analytical derivatives !
+    if sim_box.I_have_GPU > 0:
+        aladyn_ANN.Frc_ANN_ACC(pot_module.ecoh)  # ! Analytical derivatives !
     else:
-        aladyn_ANN.Frc_ANN_OMP(aladyn_mods.pot_module.ecoh)
+        aladyn_ANN.Frc_ANN_OMP(pot_module.ecoh)
 
-    aladyn_mods.sim_box.error_check(ihalt, 'ERROR in force().')
+    sim_box.error_check(sim_box.ihalt, 'ERROR in force().')
 
     return
     # ! End of force !
@@ -969,16 +981,16 @@ def node_management():
     # use sim_box
     # use IO
 
-    node_info = aladyn_mods.node_conf()
+    node_info = node_conf.node_conf()
 
     my_node_name, node_name, name_of_node, name_in_group = "", "", "", ""
     ngroup_of_node = [0]
 
     get_node_config(node_info)
     report_node_config(node_info)
-
-    aladyn_mods.sim_box.alloc_nodes(1, ierror)
-    aladyn_mods.sim_box.error_check(ierror, 'ERROR in alloc_nodes...')
+    ierror=0
+    sim_box.alloc_nodes(1, ierror)
+    sim_box.error_check(ierror, 'ERROR in alloc_nodes...')
 
     nxold = 0
     nyold = 0
@@ -1082,8 +1094,15 @@ def check_resources(node_info):
     # ! Those are replacements of ACC_ * equivalents    !
     # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
 
-    devicetype = aladyn_sys.sys_ACC.get_device_type()
-    nACC_devices = aladyn_sys.sys_ACC.get_num_devices(devicetype)
+    ###devicetype = aladyn_sys.sys_ACC.get_device_type()
+    devicetype = 0
+
+
+    ###nACC_devices = aladyn_sys.sys_ACC.get_num_devices(devicetype)
+
+    nACC_devices = 0
+
+
     I_have_GPU = nACC_devices
 
     # ! devicetype = 1; I_have_GPU = 1  ! Test GPU code without GPU VVVV !
@@ -1095,8 +1114,11 @@ def check_resources(node_info):
     # ! Those are replacements of OMP_ * equivalents !
     # ! redefined in pgmc_sys_OMP.f and pgmc_sys_ACC.f !
 
-    MP_procs = aladyn_sys.GET_NUM_PROCS()
-    MP_max_threads = aladyn_sys.GET_MAX_THREADS()
+    ###MP_procs = aladyn_sys.GET_NUM_PROCS()
+
+    MP_procs = 1
+    ### MP_max_threads = aladyn_sys.GET_MAX_THREADS()
+    MP_max_threads = 1
     # ! MP_threads = aladyn_sys.GET_NUM_THREADS()
     MP_threads = MP_max_threads
 

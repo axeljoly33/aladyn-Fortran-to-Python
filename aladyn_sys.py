@@ -65,18 +65,17 @@
 # ------------------------------------------------------------------
 #
 
-import os
 import sys
 import operator
 import numpy as np
 import random
 import torch
 import math
-import aladyn_mods
-import aladyn_MD
-import aladyn_IO
-import aladyn_ANN
-import aladyn
+#import aladyn_mods
+#import aladyn_MD
+#import aladyn_IO
+#import aladyn_ANN
+#import aladyn
 
 
 #
@@ -85,7 +84,7 @@ import aladyn
 
 def GET_NUM_PROCS():
 
-    GET_NUM_PROCS = os.cpu_count()  # OMP_GET_NUM_PROCS()
+    GET_NUM_PROCS = OMP_GET_NUM_PROCS()
 
     return GET_NUM_PROCS
     # ! end function !
@@ -128,7 +127,7 @@ def GET_WTIME():
 
 def GET_MAX_THREADS():
 
-    GET_MAX_THREADS = os.cpu_count()  # OMP_GET_MAX_THREADS()
+    GET_MAX_THREADS = OMP_GET_MAX_THREADS()
 
     return GET_MAX_THREADS
     # ! end function !
@@ -155,88 +154,3 @@ def SET_NUM_THREADS(num_thrds):
 # Overwrites some OpenACC functions when ACC is not available
 # ------------------------------------------------------------------
 #
-
-class sys_ACC:
-
-    devicetype = 0
-    acc_device_current = 0
-    My_GPU_mem, My_GPU_free_mem = 0, 0
-
-    #
-    # ------------------------------------------------------------------
-    #
-
-    def get_device_type(self):
-
-        get_device_type = 0
-
-        return get_device_type
-        # ! end function !
-
-    #
-    # ------------------------------------------------------------------
-    #
-
-    def get_num_devices(self, idev_type):
-
-        get_num_devices = 0
-
-        return get_num_devices
-        # ! end function !
-
-    #
-    # ------------------------------------------------------------------
-    #
-
-    def set_device_num(self, my_device, dev_type):
-
-        # integer, intent(in) :: my_device, dev_type
-
-        return
-        # ! end subroutine !
-
-    #
-    # ------------------------------------------------------------------
-    #
-
-    def get_gpu_mem(self, My_GPU):
-
-        #integer, intent(in) :: My_GPU
-
-        get_gpu_mem = 0
-
-        return get_gpu_mem
-        # ! end function !
-
-    #
-    # ------------------------------------------------------------------
-    #
-
-    def get_gpu_free_mem(self, My_GPU):
-
-        #integer, intent(in) :: My_GPU
-
-        get_gpu_free_mem = 0
-
-        return get_gpu_free_mem
-        # ! end function !
-
-    #
-    # ------------------------------------------------------------------
-    #
-    def GPU_Init(self, my_device):
-
-        #integer, intent(in) :: my_device
-
-        My_GPU_mem = 0
-        My_GPU_free_mem = 0
-
-        return
-        # ! end subroutine !
-    #
-    # ------------------------------------------------------------------
-    #
-        # END MODULE ! sys_ACC !
-    #
-    # =====================================================================
-    #

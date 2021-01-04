@@ -68,11 +68,16 @@ import numpy as np
 import random
 import torch
 import math
-import aladyn_sys
-import aladyn_mods
-import aladyn_MD
-import aladyn_ANN
-import aladyn
+#import aladyn_sys
+import atoms
+import sim_box
+import constants
+import pot_module
+import node_conf
+import group_conf
+#import aladyn_MD
+import aladyn_ANN#ann
+#import aladyn
 
 
 #
@@ -84,6 +89,8 @@ import aladyn
 Lines_INI = 0
 Lines_Read = 0
 
+pltFile= 'structure.plt'
+
 ##private :: subroutine fast_GET
 ##private :: subroutine fast_PUT
 ##private :: subroutine shell_P2P
@@ -94,16 +101,16 @@ Lines_Read = 0
 
 def finder():
 
-    natoms_in_cell = [0] * aladyn_mods.sim_box.ncell_per_node  # ! speedup: 1.450 !
+    natoms_in_cell = [0] * (sim_box.ncell_per_node+1)  # ! speedup: 1.450 !
 
-    cellix = float(aladyn_mods.sim_box.nnx)
-    celliy = float(aladyn_mods.sim_box.nny)
-    celliz = float(aladyn_mods.sim_box.nnz)
+    cellix = float(sim_box.nnx)
+    celliy = float(sim_box.nny)
+    celliz = float(sim_box.nnz)
 
-    for n in range(1, aladyn_mods.sim_box.natoms + 1):  # ! 104 vs 51: speedup: 2.010 !
-        sxn = aladyn_mods.atoms.sx[n]
-        syn = aladyn_mods.atoms.sy[n]
-        szn = aladyn_mods.atoms.sz[n]
+    for n in range(1, sim_box.natoms + 1):  # ! 104 vs 51: speedup: 2.010 !
+        sxn = atoms.sx[n]
+        syn = atoms.sy[n]
+        szn = atoms.sz[n]
 
         if sxn >= 0.5:  # ! make periodic along X !
             sxn = sxn - 1.0  # ! 2xfaster than sxn=sxn-dnint(sxn) !
@@ -120,41 +127,41 @@ def finder():
         elif szn < -0.5:
             szn = szn + 1.0
 
-        aladyn_mods.atoms.sx[n] = sxn
-        aladyn_mods.atoms.sy[n] = syn
-        aladyn_mods.atoms.sz[n] = szn
+        atoms.sx[n] = sxn
+        atoms.sy[n] = syn
+        atoms.sz[n] = szn
     # ! do n=1,natoms !
     #
     # *** now update the link-cell arrays
     #
     ierror = 0
-    MC_rank_XY = aladyn_mods.sim_box.MC_rank_X * aladyn_mods.sim_box.MC_rank_Y
+    MC_rank_XY = sim_box.MC_rank_X * sim_box.MC_rank_Y
 
-    for i in range(1, aladyn_mods.sim_box.natoms + 1):
+    for i in range(1, sim_box.natoms + 1):
 
-        ix = int((aladyn_mods.atoms.sx[i] + 0.5) * cellix)
-        iy = int((aladyn_mods.atoms.sy[i] + 0.5) * celliy)
-        iz = int((aladyn_mods.atoms.sz[i] + 0.5) * celliz)
+        ix = int((atoms.sx[i] + 0.5) * cellix)
+        iy = int((atoms.sy[i] + 0.5) * celliy)
+        iz = int((atoms.sz[i] + 0.5) * celliz)
 
         # put atom "i" in cell "(ix,iy,iz)"
 
-        icell = operator.mod(iz + aladyn_mods.sim_box.iZ_shift, aladyn_mods.sim_box.nnz) * \
-                aladyn_mods.sim_box.nXYlayer + \
-                operator.mod(iy + aladyn_mods.sim_box.iY_shift, aladyn_mods.sim_box.nny) * \
-                aladyn_mods.sim_box.nnx + \
-                operator.mod( ix + aladyn_mods.sim_box.nnx, aladyn_mods.sim_box.nnx)
+        icell = operator.mod(iz + sim_box.iZ_shift, sim_box.nnz) * \
+                sim_box.nXYlayer + \
+                operator.mod(iy + sim_box.iY_shift, sim_box.nny) * \
+                sim_box.nnx + \
+                operator.mod( ix + sim_box.nnx, sim_box.nnx)
 
-        aladyn_mods.sim_box.ncell_of_atom[i] = icell
+        sim_box.ncell_of_atom[i] = icell
 
-        if natoms_in_cell[icell] < aladyn_mods.sim_box.natoms_per_cell:
+        if natoms_in_cell[icell] < sim_box.natoms_per_cell:
             natoms_in_cell[icell] += 1
-            aladyn_mods.sim_box.n_in_cell[natoms_in_cell[icell]][icell] = i
+            sim_box.n_in_cell[natoms_in_cell[icell]][icell] = i
         else:
             ierror = 1
 
     # ! do i=1,natoms !
 
-    aladyn_mods.sim_box.error_check(ierror, 'ERROR: FINDER: Too many atoms per cell...')
+    sim_box.error_check(ierror, 'ERROR: FINDER: Too many atoms per cell...')
     # ! End of finder !
 
 #
@@ -166,26 +173,26 @@ def alloc_atoms():
     # use sys_ACC
     # use ANN
 
-    print('ALLOCATE_ATOMS: ', aladyn_mods.sim_box.natoms_alloc)
+    print('ALLOCATE_ATOMS: ', sim_box.natoms_alloc)
 
     ierr_acc = 0
     ierror = 0
 
-    aladyn_mods.atoms.alloc_atoms_sys(ierror)
-    aladyn_mods.sim_box.error_check(ierror, 'Memory alloc_atoms_sys error in alloc_aladyn_mods.atoms...')
+    atoms.alloc_atoms_sys(ierror)
+    sim_box.error_check(ierror, 'Memory alloc_atoms_sys error in alloc_atoms...')
 
     if ierror != 0:
         aladyn_ANN.alloc_atoms_ANN(ierror)
-        aladyn_mods.sim_box.error_check(ierror, 'Memory alloc_atoms_ANN error in alloc_aladyn_mods.atoms...')
+        sim_box.error_check(ierror, 'Memory alloc_atoms_ANN error in alloc_atoms...')
         return
 
-    aladyn_mods.atoms.alloc_atoms_MD(ierror)  # ! alloc x1,.. x5 !
+    atoms.alloc_atoms_MD(ierror)  # ! alloc x1,.. x5 !
 
-    nbufsize = 16 * aladyn_mods.sim_box.natoms_alloc  # ! max isize in finder_MD !
+    nbufsize = 16 * sim_box.natoms_alloc  # ! max isize in finder_MD !
     if ierror == 0:
-        aladyn_mods.sim_box.alloc_buffers(ierror)
+        sim_box.alloc_buffers(ierror)
 
-    aladyn_mods.sim_box.error_check(ierror, 'MEMORY alloc_buffers error in alloc_aladyn_mods.atoms...')
+    sim_box.error_check(ierror, 'MEMORY alloc_buffers error in alloc_atoms...')
 
     # ! End of alloc_atoms !
 
@@ -202,9 +209,9 @@ def write_structure_plt():
     h_out = 0.0
 
     isize = 7
-    itime = int(aladyn_mods.sim_box.real_time)
+    itime = int(sim_box.real_time)
 
-    dt1 = 1.0 / aladyn_mods.atoms.dt_step  # ! 1/[ps] !
+    dt1 = 1.0 / atoms.dt_step  # ! 1/[ps] !
 
     fname = 'structure.' + str(itime) + '.plt'
 
@@ -219,37 +226,37 @@ def write_structure_plt():
     for i in range(n - k + 1, n + 1):
         fname[i] = ' '
 
-    ffname = aladyn_mods.sim_box.file_path + fname
+    ffname = sim_box.file_path + fname
     f = open(ffname)
 
-    xtmx = aladyn_mods.sim_box.h[1][1] * 0.5  # ! half the size in X in [Ang.] !
+    xtmx = sim_box.h[1][1] * 0.5  # ! half the size in X in [Ang.] !
     xtmn = -xtmx
-    ytmx = aladyn_mods.sim_box.h[2][2] * 0.5  # ! half the size in Y in [Ang.] !
+    ytmx = sim_box.h[2][2] * 0.5  # ! half the size in Y in [Ang.] !
     ytmn = -ytmx
-    ztmx = aladyn_mods.sim_box.h[3][3] * 0.5  # ! half the size in Z in [Ang.] !
+    ztmx = sim_box.h[3][3] * 0.5  # ! half the size in Z in [Ang.] !
     ztmn = -ztmx
 
     print('#', xtmn, ytmn, ztmn)
     print('#', xtmx, ytmx, ztmx)
     print('#', xtmn, ytmn, ztmn)
     print('#', xtmx, ytmx, ztmx)
-    print('#', aladyn_mods.sim_box.nbas, aladyn_mods.sim_box.natoms, aladyn_mods.sim_box.natoms_buf,
-          aladyn_mods.sim_box.natoms_free)
-    print('#', aladyn_mods.sim_box.r_plt, aladyn_mods.sim_box.mdx, aladyn_mods.sim_box.mdy, aladyn_mods.sim_box.mdz)
-    print('#', aladyn_mods.sim_box.ibcx, aladyn_mods.sim_box.ibcy, aladyn_mods.sim_box.ibcz)
-    print('#', aladyn_mods.sim_box.ipo, aladyn_mods.sim_box.ipl)
-    print('#', aladyn_mods.pot_module.PotEnrg_atm, aladyn_mods.sim_box.T_sys)
-    print('#', aladyn_mods.pot_module.PotEnrg_atm, aladyn_mods.sim_box.T_sys)
+    print('#', sim_box.nbas, sim_box.natoms, sim_box.natoms_buf,
+          sim_box.natoms_free)
+    print('#', sim_box.r_plt, sim_box.mdx, sim_box.mdy, sim_box.mdz)
+    print('#', sim_box.ibcx, sim_box.ibcy, sim_box.ibcz)
+    print('#', sim_box.ipo, sim_box.ipl)
+    print('#', pot_module.PotEnrg_atm, sim_box.T_sys)
+    print('#', pot_module.PotEnrg_atm, sim_box.T_sys)
 
-    for kk in range(1, aladyn_mods.sim_box.natoms + 1):
-        Cx = aladyn_mods.sim_box.h[1][1] * aladyn_mods.atoms.sx[kk] + aladyn_mods.sim_box.h[1][2] * \
-             aladyn_mods.atoms.sy[kk] + aladyn_mods.sim_box.h[1][3] * aladyn_mods.atoms.sz[kk]
-        Cy = aladyn_mods.sim_box.h[2][2] * aladyn_mods.atoms.sy[kk] + aladyn_mods.sim_box.h[2][3] * \
-             aladyn_mods.atoms.sz[kk]
-        Cz = aladyn_mods.sim_box.h[3][3] * aladyn_mods.atoms.sz[kk]
+    for kk in range(1, sim_box.natoms + 1):
+        Cx = sim_box.h[1][1] * atoms.sx[kk] + sim_box.h[1][2] * \
+             atoms.sy[kk] + sim_box.h[1][3] * atoms.sz[kk]
+        Cy = sim_box.h[2][2] * atoms.sy[kk] + sim_box.h[2][3] * \
+             atoms.sz[kk]
+        Cz = sim_box.h[3][3] * atoms.sz[kk]
 
-        ntp = aladyn_mods.atoms.ntype[kk]  # ! write type as in pot.dat file !
-        print(aladyn_mods.atoms.ident[kk], Cx, Cy, Cz, ntp, 0)
+        ntp = atoms.ntype[kk]  # ! write type as in pot.dat file !
+        print(atoms.ident[kk], Cx, Cy, Cz, ntp, 0)
 
     # ! do kk = 1, natoms !
 
@@ -267,7 +274,7 @@ def write_structure_plt():
 def read_pot_dat():
     # use constants
 
-    filename0 = ""
+    pot_module.filename = ""
 
     ierror = 0
 
@@ -279,27 +286,29 @@ def read_pot_dat():
     ifile_numbs = iatom_types * (iatom_types + 1) / 2
     ipair_types = pow(iatom_types, 2)
 
-    aladyn_mods.pot_module.alloc_pot_types(ierror)  # ! in pot_module !
+    pot_module.alloc_pot_types(ierror)  # ! in pot_module !
     # ! allocates arrays that are common to ALL pot file types and formats !
 
-    aladyn_mods.sim_box.error_check(ierror, 'alloc_pot_types error in read_pot_dat...')
+    sim_box.error_check(ierror, 'alloc_pot_types error in read_pot_dat...')
 
-    aladyn_mods.pot_module.ielement[0] = 0
-    aladyn_mods.pot_module.elem_symb[0] = 'Al'
-    aladyn_mods.pot_module.gram_mol[0] = 26.982
-    ielem = aladyn_mods.pot_module.numb_elem_Z(aladyn_mods.pot_module.elem_symb[0])
-    aladyn_mods.pot_module.ielement[0] = ielem  # ! Z - number !
-    aladyn_mods.pot_module.amass[0] = aladyn_mods.pot_module.gram_mol[0] * aladyn_mods.constants.atu
+    pot_module.ielement[0] = 0
+    print("debug yann pot_module.elem_symb ", len(pot_module.elem_symb))
+    pot_module.elem_symb[1] = 'Al'
+    pot_module.gram_mol[1] = 26.982
+    ielem = pot_module.numb_elem_Z(pot_module.elem_symb[1])
+    pot_module.ielement[1] = ielem  # ! Z - number !
+    pot_module.amass[1] = pot_module.gram_mol[1] * constants.atu
     # ! convert to atomic units !
     # ! atu = 100.0/(cavog * evjoul) = 0.010364188 eV.ps^2/nm^2 !
 
     iPOT_func_type = 1
-    aladyn_mods.pot_module.filename[0] = './ANN.dat'
+    pot_module.filename = './ANN.dat'
 
     print(' CHEMICAL ELEMENTS:', '   TYPE   ELEMENT', '    Z    Atomic Mass  POT_func_type')
     for i in range(1, iatom_types + 1):
-        print(i, aladyn_mods.pot_module.elem_symb[i], aladyn_mods.pot_module.ielement[i],
-              aladyn_mods.pot_module.gram_mol[i], iPOT_func_type)
+        print("debug yann iatom_types ", iatom_types)
+        print(i, pot_module.elem_symb[i], pot_module.ielement[i],
+              pot_module.gram_mol[i], iPOT_func_type)
 
     nelem_in_com = iatom_types
 
@@ -324,25 +333,27 @@ def structure_chem():
     # *** Collect atom types ...
     natoms_of_type = [0]
 
-    for n in range(1, aladyn_mods.sim_box.natoms + 1):
-        ntp = aladyn_mods.atoms.ntype[n]  # ! corresponds to ann.dat type order !
-        if (ntp > aladyn_mods.atoms.iatom_types) or (ntp == 0):
+    for n in range(1, sim_box.natoms + 1):
+        ntp = atoms.ntype[n]  # ! corresponds to ann.dat type order !
+        if (ntp > atoms.iatom_types) or (ntp == 0):
             ierror = 1
-            print('ERROR: atom n=', n, ' of id=', aladyn_mods.atoms.ident[n], ' is of unknown type:', ntp)
+            print('ERROR: atom n=', n, ' of id=', atoms.ident[n], ' is of unknown type:', ntp)
             break
         else:
             natoms_of_type[ntp] = natoms_of_type[ntp] + 1
 
     if ierror != 0:
-        aladyn.PROGRAM_END(1)
+        print("Le programme s'est arreter sur une erreur dans la fonction structure_chem de aladyn.io ligne 330 a 342.")
+        sys.exit("")
 
-    print('ncell_per_node=', aladyn_mods.sim_box.ncell_per_node)
-    print('ncell=', aladyn_mods.sim_box.ncell)
-    print('cell_volume=', aladyn_mods.sim_box.cell_volume, ' [Ang^3];')
-    print('    Atoms allocated per node:', aladyn_mods.sim_box.natoms_alloc)
-    print('    Atoms allocated per cell:', aladyn_mods.sim_box.natoms_per_cell)
-    print('    Atoms allocated per 3x3x3 cells:', aladyn_mods.sim_box.natoms_per_cell3)
-    print('Neighbors allocated per atom:', aladyn_mods.sim_box.nbrs_per_atom)
+
+    print('ncell_per_node=', sim_box.ncell_per_node)
+    print('ncell=', sim_box.ncell)
+    print('cell_volume=', sim_box.cell_volume, ' [Ang^3];')
+    print('    Atoms allocated per node:', sim_box.natoms_alloc)
+    print('    Atoms allocated per cell:', sim_box.natoms_per_cell)
+    print('    Atoms allocated per 3x3x3 cells:', sim_box.natoms_per_cell3)
+    print('Neighbors allocated per atom:', sim_box.nbrs_per_atom)
 
     # 15   print('    Close neighbors per atom:',i8)
 
@@ -358,21 +369,24 @@ def structure_chem():
 
 def read_structure_plt():
 
+    global pltFile
+
     file_in = ""
 
     str82 = ""
     LINE = ""
     LINE2 = ""
     DUM2 = ""
+    print("debug yann point de passage read_structure_plt")
 
     rsmax0 = 1.0
 
-    f = open('structure.plt', "r")
+    f = open(pltFile, "r")
 
-    itime = int(aladyn_mods.sim_box.start_time)
+    itime = int(sim_box.start_time)
     print(' Start time:', itime, ' [MCS]')
 
-    print('Reading structure.plt ...')
+    print('Reading ', pltFile ,' ...')
 
     fields = f.readline().strip().split()
     DUM2 = fields[0], xmn = fields[1], ymn = fields[2], zmn = fields[3]
@@ -409,7 +423,7 @@ def read_structure_plt():
         kdof_exist = 1  # ! new plt file with constrains !
 
     f.close()
-    f = open('structure.plt', "r")
+    f = open('pltFile', "r")
 
     fields = f.readline().strip().split()
     DUM2 = fields[0], xmn = fields[1], ymn = fields[2], zmn = fields[3]
@@ -437,18 +451,18 @@ def read_structure_plt():
 
     natoms = natoms_tot
 
-    aladyn_mods.sim_box.h[1][1] = (xtmx - xtmn)  # ! system size from second 2 lines !
-    aladyn_mods.sim_box.h[2][2] = (ytmx - ytmn)
-    aladyn_mods.sim_box.h[3][3] = (ztmx - ztmn)
+    sim_box.h[1][1] = (xtmx - xtmn)  # ! system size from second 2 lines !
+    sim_box.h[2][2] = (ytmx - ytmn)
+    sim_box.h[3][3] = (ztmx - ztmn)
 
-    aladyn_mods.sim_box.h[1][2] = 0.0  # ! ORT structure !
-    aladyn_mods.sim_box.h[1][3] = 0.0
-    aladyn_mods.sim_box.h[2][3] = 0.0
-    aladyn_mods.sim_box.h[2][1] = 0.0
-    aladyn_mods.sim_box.h[3][1] = 0.0
-    aladyn_mods.sim_box.h[3][2] = 0.0
+    sim_box.h[1][2] = 0.0  # ! ORT structure !
+    sim_box.h[1][3] = 0.0
+    sim_box.h[2][3] = 0.0
+    sim_box.h[2][1] = 0.0
+    sim_box.h[3][1] = 0.0
+    sim_box.h[3][2] = 0.0
 
-    aladyn_mods.sim_box.matinv(aladyn_mods.sim_box.h, aladyn_mods.sim_box.hi, dh)
+    sim_box.matinv(sim_box.h, sim_box.hi)
 
     print('Input file Pot. Enrg=', PotEnrg_atm)
     print(' ')
@@ -472,11 +486,11 @@ def read_structure_plt():
             fields = f.readline().strip().split()
             id = fields[0], xk = fields[1], yk = fields[2], zk = fields[3], ktype = fields[4]
 
-        aladyn_mods.atoms.ident[i] = int(id)
-        aladyn_mods.atoms.rx[i] = float(xk)
-        aladyn_mods.atoms.ry[i] = float(yk)
-        aladyn_mods.atoms.rz[i] = float(zk)
-        aladyn_mods.atoms.ntype[i] = int(ktype)
+        atoms.ident[i] = int(id)
+        atoms.rx[i] = float(xk)
+        atoms.ry[i] = float(yk)
+        atoms.rz[i] = float(zk)
+        atoms.ntype[i] = int(ktype)
 
     f.close()
     # ! End of read_structure_plt !
@@ -490,27 +504,29 @@ def read_structure_plt():
 
 def read_structure():
 
-    if aladyn_mods.pot_module.INP_STR_TYPE:
+    print("debug yann INP_STR_TYPE",pot_module.INP_STR_TYPE )
+
+    if pot_module.INP_STR_TYPE:
         read_structure_plt()  # ! plt type !
 
     print(' ')
     print('h(i,j) matrix:')
-    print(aladyn_mods.sim_box.h[1][1], aladyn_mods.sim_box.h[1][2], aladyn_mods.sim_box.h[1][3])
-    print(aladyn_mods.sim_box.h[2][1], aladyn_mods.sim_box.h[2][2], aladyn_mods.sim_box.h[2][3])
-    print(aladyn_mods.sim_box.h[3][1], aladyn_mods.sim_box.h[3][2], aladyn_mods.sim_box.h[3][3])
-    print('Crystal structure has ', aladyn_mods.sim_box.natoms, ' atoms')
+    print(sim_box.h[1][1], sim_box.h[1][2], sim_box.h[1][3])
+    print(sim_box.h[2][1], sim_box.h[2][2], sim_box.h[2][3])
+    print(sim_box.h[3][1], sim_box.h[3][2], sim_box.h[3][3])
+    print('Crystal structure has ', sim_box.natoms, ' atoms')
 
     structure_chem()
 
-    aladyn_mods.sim_box.matinv(aladyn_mods.sim_box.h, aladyn_mods.sim_box.hi, dh)  # ! h * hi = I !
-    hi11 = aladyn_mods.sim_box.hi[1][1], hi12 = aladyn_mods.sim_box.hi[1][2], hi13 = aladyn_mods.sim_box.hi[1][3]
-    hi22 = aladyn_mods.sim_box.hi[2][2], hi23 = aladyn_mods.sim_box.hi[2][3], hi33 = aladyn_mods.sim_box.hi[3][3]
+    sim_box.matinv(sim_box.h, sim_box.hi)  # ! h * hi = I !
+    hi11 = sim_box.hi[1][1], hi12 = sim_box.hi[1][2], hi13 = sim_box.hi[1][3]
+    hi22 = sim_box.hi[2][2], hi23 = sim_box.hi[2][3], hi33 = sim_box.hi[3][3]
 
-    for n in range(1, aladyn_mods.sim_box.natoms + 1):
-        aladyn_mods.atoms.sx[n] = hi11 * aladyn_mods.atoms.rx[n] + hi12 * aladyn_mods.atoms.ry[n] + \
-                                  hi13 * aladyn_mods.atoms.rz[n]
-        aladyn_mods.atoms.sy[n] = hi22 * aladyn_mods.atoms.ry[n] + hi23 * aladyn_mods.atoms.rz[n]
-        aladyn_mods.atoms.sz[n] = hi33 * aladyn_mods.atoms.rz[n]
+    for n in range(1, sim_box.natoms + 1):
+        atoms.sx[n] = hi11 * atoms.rx[n] + hi12 * atoms.ry[n] + \
+                                  hi13 * atoms.rz[n]
+        atoms.sy[n] = hi22 * atoms.ry[n] + hi23 * atoms.rz[n]
+        atoms.sz[n] = hi33 * atoms.rz[n]
     # ! End of read_structure !
 
 #
@@ -549,19 +565,19 @@ def read_com():
     ierror = 0
     start_time = 0.0
 
-    for i in range(0, aladyn_mods.atoms.iatom_types + 1):
-        aladyn_mods.pot_module.iZ_elem_in_com[i] = 13
+    for i in range(0, atoms.iatom_types + 1):
+        pot_module.iZ_elem_in_com[i] = 13
 
     # --- Some Initializations ---
 
     real_time = start_time  # ! [fms] !
-    T_sys = aladyn_mods.sim_box.T_set
+    T_sys = sim_box.T_set
 
-    r_cut_short = aladyn_mods.pot_module.r_cut_off  # ! pot. cut off !
+    r_cut_short = pot_module.r_cut_off  # ! pot. cut off !
 
-    size = aladyn_mods.pot_module.r_cut_off
+    size = pot_module.r_cut_off
 
-    aladyn_mods.pot_module.r2_cut_off = pow(aladyn_mods.pot_module.r_cut_off, 2)  # ! [Ang^2] !
+    pot_module.r2_cut_off = pow(pot_module.r_cut_off, 2)  # ! [Ang^2] !
     r2_cut_short = pow(r_cut_short, 2)
     # ! End of read_com !
 
