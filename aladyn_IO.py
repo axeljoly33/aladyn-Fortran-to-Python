@@ -608,7 +608,7 @@ def read_Args():
 
     k = 0
     N_args = len(sys.argv)
-    GETARG = str(sys.argv)
+    GETARG = sys.argv
 
     while k < N_args:
         str_opt = GETARG[k]
@@ -618,14 +618,17 @@ def read_Args():
             str_num = GETARG[k]
             k += 1
             iver = str_num
+            print('- Version ', iver)
         elif (str_opt == '-n') or (str_opt == '-N'):
             str_num = GETARG[k]
             k += 1
             nstep = str_num
+            print('- Executing ', nstep, ' MD steps')
         elif (str_opt == '-m') or (str_opt == '-M'):
             str_num = GETARG[k]
             k += 1
             measure_step = str_num
+            print('- Measure at each ', measure_step, ' MD steps')
         # ! if((str_opt(1:2)... !
 
     # ! do while(k.le.N_args) !
@@ -633,9 +636,6 @@ def read_Args():
     nodes_on_Y = 1
     nodes_on_Z = 1
 
-    print(' Version:', iver)
-    print(' Executing:    ', nstep, ' MD steps')
-    print(' Measure at each ', measure_step, ' MD steps')
     # ! End of read_Args !
 
 #

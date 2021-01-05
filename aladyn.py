@@ -982,13 +982,21 @@ def node_management():
     # use IO
 
     node_info = node_conf.node_conf()
+    #print('node_name=', node_info.node_name)
+    #print('devicetype=', node_info.devicetype)
+    #print('nACC_devices=', node_info.nACC_devices)
+    #print('I_have_GPU=', node_info.I_have_GPU)
+    #print('My_GPU_id=', node_info.My_GPU_id)
+    #print('MP_procs=', node_info.MP_procs)
+    #print('MP_threads=', node_info.MP_threads)
 
     my_node_name, node_name, name_of_node, name_in_group = "", "", "", ""
     ngroup_of_node = [0]
 
     get_node_config(node_info)
     report_node_config(node_info)
-    ierror=0
+
+    ierror = 0
     sim_box.alloc_nodes(1, ierror)
     sim_box.error_check(ierror, 'ERROR in alloc_nodes...')
 
@@ -1030,28 +1038,28 @@ def report_node_config(node_info):
     # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
 
     if I_have_GPU > 0:
-        aladyn_sys.sys_ACC.set_device_num(My_GPU_id, devicetype)
-        aladyn_sys.sys_ACC.GPU_Init(aladyn_sys.sys_ACC.acc_device_current)
-        My_GPU_mem = aladyn_sys.sys_ACC.get_gpu_mem(My_GPU_id)
-        My_GPU_free_mem = aladyn_sys.sys_ACC.get_gpu_free_mem(My_GPU_id)
-        print(' | GPUs detected', I_have_GPU, '\n | My_GPU_id=', My_GPU_id, ' with memory of:', My_GPU_mem,
+        sys_ACC.set_device_num(My_GPU_id, devicetype)
+        sys_ACC.GPU_Init(sys_ACC.acc_device_current)
+        My_GPU_mem = sys_ACC.get_gpu_mem(My_GPU_id)
+        My_GPU_free_mem = sys_ACC.get_gpu_free_mem(My_GPU_id)
+        print('| GPUs detected', I_have_GPU, '\n | My_GPU_id=', My_GPU_id, ' with memory of:', My_GPU_mem,
               ' bytes, free:', My_GPU_free_mem)
     else:
-        print(' | No GPU detected.')
+        print('| No GPU detected.')
 
     if My_GPU_id == -1:
-        print(' | CPUs:', MP_procs, ' using ', MP_threads, ' threads and no GPU devices')
+        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads and no GPU devices')
     elif My_GPU_id == 0:
-        print(' | CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
               '-st GPU of devicetype=', devicetype)
     elif My_GPU_id == 1:
-        print(' | CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
               '-st GPU of devicetype=', devicetype)
     elif My_GPU_id == 2:
-        print(' | CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
               '-st GPU of devicetype=', devicetype)
     else:
-        print(' | CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
               '-st GPU of devicetype=', devicetype)
 
     print('|')
@@ -1094,18 +1102,14 @@ def check_resources(node_info):
     # ! Those are replacements of ACC_ * equivalents    !
     # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
 
-    ###devicetype = aladyn_sys.sys_ACC.get_device_type()
-    devicetype = 0
+    devicetype = sys_ACC.get_device_type()
 
-
-    ###nACC_devices = aladyn_sys.sys_ACC.get_num_devices(devicetype)
-
-    nACC_devices = 0
-
+    nACC_devices = sys_ACC.get_num_devices(devicetype)
 
     I_have_GPU = nACC_devices
 
-    # ! devicetype = 1; I_have_GPU = 1  ! Test GPU code without GPU VVVV !
+    # ! devicetype = 1 ; I_have_GPU = 1 !
+    # ! Test GPU code without GPU VVVV !
 
     My_GPU_id = -1
     if nACC_devices > 0:
@@ -1114,12 +1118,11 @@ def check_resources(node_info):
     # ! Those are replacements of OMP_ * equivalents !
     # ! redefined in pgmc_sys_OMP.f and pgmc_sys_ACC.f !
 
-    ###MP_procs = aladyn_sys.GET_NUM_PROCS()
+    MP_procs = aladyn_sys.GET_NUM_PROCS()
 
-    MP_procs = 1
-    ### MP_max_threads = aladyn_sys.GET_MAX_THREADS()
-    MP_max_threads = 1
-    # ! MP_threads = aladyn_sys.GET_NUM_THREADS()
+    MP_max_threads = aladyn_sys.GET_MAX_THREADS()
+
+    # ! MP_threads = aladyn_sys.GET_NUM_THREADS() !
     MP_threads = MP_max_threads
 
     node_info.MP_procs = MP_procs

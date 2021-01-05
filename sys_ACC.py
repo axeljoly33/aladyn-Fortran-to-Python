@@ -18,7 +18,7 @@ def get_device_type():
 # ------------------------------------------------------------------
 #
 
-def get_num_devices( idev_type):
+def get_num_devices(idev_type):
     global get_num_devices
 
     get_num_devices = 0
@@ -30,7 +30,7 @@ def get_num_devices( idev_type):
 # ------------------------------------------------------------------
 #
 
-def set_device_num( my_device, dev_type):
+def set_device_num(my_device, dev_type):
 
     # integer, intent(in) :: my_device, dev_type
 
@@ -44,6 +44,7 @@ def set_device_num( my_device, dev_type):
 def get_gpu_mem( My_GPU):
 
     #integer, intent(in) :: My_GPU
+    global My_GPU_mem
 
     get_gpu_mem = 0
 
@@ -57,6 +58,7 @@ def get_gpu_mem( My_GPU):
 def get_gpu_free_mem( My_GPU):
 
     #integer, intent(in) :: My_GPU
+    global My_GPU_free_mem
 
     get_gpu_free_mem = 0
 

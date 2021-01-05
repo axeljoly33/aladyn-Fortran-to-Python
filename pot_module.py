@@ -10,9 +10,7 @@ import sim_box
 import constants
 
 
-
-maxconstr = 63  # ! Max number of defined    !
-# ! constraints              !
+maxconstr = 63  # ! Max number of defined constraints !
 chem_symb = [""] * (112+1)
 ipot = [0] * (112+1)  # ! maximum numb.elements possible !
 

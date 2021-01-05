@@ -65,18 +65,7 @@
 # ------------------------------------------------------------------
 #
 
-import sys
-import operator
-import numpy as np
-import random
-import torch
-import math
-#import aladyn_mods
-#import aladyn_MD
-#import aladyn_IO
-#import aladyn_ANN
-#import aladyn
-
+import time
 
 #
 # ------------------------------------------------------------------
@@ -84,7 +73,7 @@ import math
 
 def GET_NUM_PROCS():
 
-    GET_NUM_PROCS = OMP_GET_NUM_PROCS()
+    GET_NUM_PROCS = 1
 
     return GET_NUM_PROCS
     # ! end function !
@@ -95,7 +84,7 @@ def GET_NUM_PROCS():
 
 def GET_NUM_THREADS():
 
-    GET_NUM_THREADS = omp_get_num_threads()
+    GET_NUM_THREADS = 1
 
     return GET_NUM_THREADS
     # ! end function !
@@ -105,7 +94,7 @@ def GET_NUM_THREADS():
 
 def GET_THREAD_NUM():
 
-    GET_THREAD_NUM = OMP_get_thread_num()
+    GET_THREAD_NUM = 0
 
     return GET_THREAD_NUM
     # ! end function !
@@ -116,7 +105,7 @@ def GET_THREAD_NUM():
 
 def GET_WTIME():
 
-    GET_WTIME = OMP_get_wtime()
+    GET_WTIME = time.time()
 
     return GET_WTIME
     # ! end function !
@@ -127,7 +116,7 @@ def GET_WTIME():
 
 def GET_MAX_THREADS():
 
-    GET_MAX_THREADS = OMP_GET_MAX_THREADS()
+    GET_MAX_THREADS = 1
 
     return GET_MAX_THREADS
     # ! end function !
@@ -139,8 +128,6 @@ def GET_MAX_THREADS():
 def SET_NUM_THREADS(num_thrds):
 
     # integer, intent(in) :: num_thrds
-
-    OMP_SET_NUM_THREADS(num_thrds)
 
     return
     # ! end subroutine !

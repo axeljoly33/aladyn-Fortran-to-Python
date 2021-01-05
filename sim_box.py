@@ -7,7 +7,6 @@ import math
 import node_conf
 
 
-
 # *** Set some working parameters here ***
 #mynode_conf = node_conf
 
