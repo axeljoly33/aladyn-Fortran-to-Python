@@ -1629,32 +1629,39 @@ def alloc_types_ANN(ierror):
 """
 
 
-def deall_types_ANN(ierror):
-    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
-    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
-    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
-    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
-    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
-    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+def deall_types_ANN():
 
-    ialloc = []
-    for i in range(8 + 1): ialloc.append(0)
+    global W1_ann, W2_ann, W3_ann, B1_ann, B2_ann, B3_ann, r0_value, r0G_value, buf_ann
 
-    W1_ann = []
-    W2_ann = []
-    W3_ann = []
+    ialloc = [0] * (8 + 1)
 
-    B1_ann = []
-    B2_ann = []
-    B3_ann = []
+    if W1_ann:
+        W1_ann.clear()
+    if W2_ann:
+        W2_ann.clear()
+    if W3_ann:
+        W3_ann.clear()
 
-    r0_value = []
-    r0G_value = []
-    buf_ann = []
+    if B1_ann:
+        B1_ann.clear()
+    if B2_ann:
+        B2_ann.clear()
+    if B3_ann:
+        B3_ann.clear()
+
+    if r0_value:
+        r0_value.clear()
+    if r0G_value:
+        r0G_value.clear()
+    if buf_ann:
+        buf_ann.clear()
 
     ierror = 0
     for i in range(1, 8 + 1):
         ierror = ierror + ialloc[i]
+
+    return ierror
+    # ! End of deall_types_ANN !
 
 
 """
@@ -1829,53 +1836,76 @@ def alloc_atoms_ANN(ierror):
 """
 
 
-def deall_atoms_ANN(ierror):
-    global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
-    global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
-    global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
-    global U0, U1, U2, W1_ann, W3_ann, W2_ann, B1_ann, B3_ann, B2_ann, dBOP_param_dxij, buf_ann
-    global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
-    global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
+def deall_atoms_ANN():
 
-    ialloc = []
-    for i in range(17 + 1): ialloc.append(0)
+    global dBOP_param_dxi, Gi_atom, dG_i, Gi_list, U1, U2, Gi_new, xr_ij0, xr_ij1, xr_ij2, xr_ij3, fsij_dev
+    global dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, Gi_dev, Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfuN_dev
+    global U1f1, U2f1, dBOP_param_dxij_, r0Rc
 
-    dBOP_param_dxij = []
+    ialloc = [0] * (17 + 1)
 
-    Gi_atom = []
-    dG_i = []
-    Gi_list = []
+    if dBOP_param_dxij:
+        dBOP_param_dxij.clear()
 
-    U1 = []
-    U2 = []
+    if Gi_atom:
+        Gi_atom.clear()
+    if dG_i:
+        dG_i.clear()
+    if Gi_list:
+        Gi_list.clear()
 
-    Gi_new = []
+    if U1:
+        U1.clear()
+    if U2:
+        U2.clear()
 
-    xr_ij0 = []
-    xr_ij1 = []
-    xr_ij2 = []
-    xr_ij3 = []
-    fsij_dev = []
-    dfs_rij_3D1 = []
-    dfs_rij_3D2 = []
-    dfs_rij_3D3 = []
-    Gi_dev = []
-    Gi_3D_dev1 = []
-    Gi_3D_dev2 = []
-    Gi_3D_dev3 = []
-    dfuN_dev = []
-    U1f1 = []
-    U2f1 = []
-    dBOP_param_dxij_ = []
-    r0Rc = []
+    if Gi_new:
+        Gi_new.clear()
+
+    if xr_ij0:
+        xr_ij0.clear()
+    if xr_ij1:
+        xr_ij1.clear()
+    if xr_ij2:
+        xr_ij2.clear()
+    if xr_ij3:
+        xr_ij3.clear()
+    if fsij_dev:
+        fsij_dev.clear()
+    if dfs_rij_3D1:
+        dfs_rij_3D1.clear()
+    if dfs_rij_3D2:
+        dfs_rij_3D2.clear()
+    if dfs_rij_3D3:
+        dfs_rij_3D3.clear()
+    if Gi_dev:
+        Gi_dev.clear()
+    if Gi_3D_dev1:
+        Gi_3D_dev1.clear()
+    if Gi_3D_dev2:
+        Gi_3D_dev2.clear()
+    if Gi_3D_dev3:
+        Gi_3D_dev3.clear()
+    if dfuN_dev:
+        dfuN_dev.clear()
+    if U1f1:
+        U1f1.clear()
+    if U2f1:
+        U2f1.clear()
+    if dBOP_param_dxij_:
+        dBOP_param_dxij_.clear()
+    if r0Rc:
+        r0Rc.clear()
 
     ierror = 0
     for i in range(1, 17 + 1):
         ierror = ierror + ialloc[i]
 
+    return ierror
+    # ! End of deall_atoms_ANN !
 
 """
-!						! deall_atoms_ANN !
+! 
 ! ------------------------------------------------------------------
 !
 """

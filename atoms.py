@@ -7,12 +7,12 @@ import math
 
 nbr_tot, max_nbrs = 0, 0
 
-iatom_types, ipair_types, icomp_high, icomp_low = 1, 0, 0, 0
+iatom_types, ipair_types, icomp_high, icomp_low = 0, 0, 0, 0
 
 at_vol, at_vol_inp, sys_vol = 0.0, 0.0, 0.0
 
-sum_dcm = [0.0] * (3+1)
-Sys_dcmR = [0.0] * (3+1)
+sum_dcm = [0.0] * (3 + 1)
+Sys_dcmR = [0.0] * (3 + 1)
 Sys_dcmS = 0.0
 # ! System center of mass deviation !
 
@@ -99,11 +99,11 @@ def alloc_atoms_sys(ierror):
 # ! ---------------------------------------------------------------------
 # !
 
-def deall_atoms_sys(ierror):
+def deall_atoms_sys():
 
     global ident,ntype,rx,ry,rz,sx,sy,sz,nbr_list,frr,Ep_of 
 
-    ialloc = [0] * (12+1)
+    ialloc = [0] * (12 + 1)
 
     if ident:
         ident.clear()
@@ -186,11 +186,11 @@ def alloc_atoms_MD(ierror):
 # ! ---------------------------------------------------------------------
 # !
 
-def deall_atoms_MD( ierror):
+def deall_atoms_MD():
 
     global x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,sumPx,sumPy,sumPz,Tscale
 
-    ialloc = [0] * (20+1)
+    ialloc = [0] * (20 + 1)
 
     if x1:
         x1.clear()

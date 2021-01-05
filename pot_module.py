@@ -8,6 +8,7 @@ import math
 import atoms
 import sim_box
 import constants
+import aladyn_IO
 
 
 maxconstr = 63  # ! Max number of defined constraints !
@@ -63,21 +64,11 @@ r2_pair_cut = [0.0]  # ! double precision !
 # ! -------------------------------------------------------------------
 # !
 
-def conv_to_low( strIn, strOut, len_str):
+def conv_to_low(strIn):
 
-    len_str = len(strIn.lstrip())
+    strOut = strIn.lower()
 
-    strOut=strIn.lower()
-
-    # ! print('conv_to_low: len(', strIn, ')=', len_trim(strIn))
-
-    #for i in range(1, len_str + 1):
-        #j = ord(strIn[i])
-        #if ord('A') <= j <= ord('Z'):
-            #strOut[i] = chr(ord(strIn[i]) + 32)
-        #else:
-            #strOut[i] = strIn[i]
-
+    return strOut
     # ! End of conv_to_low !
 
 # !
@@ -314,6 +305,7 @@ def init_elements():
     chem_symb[112] = 'Cn'
     elem_radius[112] = 1.75
 
+    return
     # ! End of init_elements !
 
 # !
@@ -321,17 +313,17 @@ def init_elements():
 # !
 
 def numb_elem_Z(chem):
-    global conv_to_low,chem_symb
+    global chem_symb
     chem_low = ""
     chem_symb_low = ""
 
     len_chem = len(chem.lstrip())
 
     numZ = 0
-    conv_to_low(chem, chem_low, len_chem)
+    chem_low = conv_to_low(chem)
     for iZ in range(1, 112 + 1):
         len_symb = len(chem_symb[iZ].lstrip())
-        conv_to_low(chem_symb[iZ], chem_symb_low, len_symb)
+        chem_symb_low = conv_to_low(chem_symb[iZ])
         if len_chem == len_symb:
             if chem_low == chem_symb_low:
                 numZ = iZ
@@ -339,7 +331,9 @@ def numb_elem_Z(chem):
 
     # ! write(6, *) 'numb_elem_Z(', chem, ')=', numZ
 
-    return numZ
+    numb_elem_Z = numZ
+
+    return numb_elem_Z
     # ! End of numb_elem_Z !
 
 # !
@@ -365,33 +359,31 @@ def get_chem():
 # ! ---------------------------------------------------------------------
 # !
 
-def alloc_pot_types( ierror):
+def alloc_pot_types():
 
     global elem_symb,ielement,natoms_of_type,iZ_elem_in_com,amass,sum_mass,gram_mol,Am_of_type,Elem_in_com,r_pair_cut
     global r2_pair_cut,E_kin,pTemp,filename
 
-    ialloc = [0] * (14+1)
+    ialloc = [0] * (14 + 1)
 
-    print("debug yann atoms.iatom_types as in pot ",atoms.iatom_types)
+    elem_symb = [""] * (atoms.iatom_types + 1)
 
-    elem_symb = [0] * (atoms.iatom_types+1)
+    ielement = [0] * (atoms.iatom_types + 1)
+    natoms_of_type = [0] * (atoms.iatom_types + 1)
+    iZ_elem_in_com = [0] * (atoms.iatom_types + 1)
 
-    ielement = [0] * (atoms.iatom_types+1)
-    natoms_of_type = [0] * (atoms.iatom_types+1)
-    iZ_elem_in_com = [0] * (atoms.iatom_types+1)
+    amass = [0.0] * (atoms.iatom_types + 1)
+    sum_mass = [0.0] * (atoms.iatom_types + 1)
+    gram_mol = [0.0] * (atoms.iatom_types + 1)
 
-    amass = [0] * (atoms.iatom_types+1)
-    sum_mass = [0] * (atoms.iatom_types+1)
-    gram_mol = [0] * (atoms.iatom_types+1)
+    Am_of_type = [0.0] * (atoms.iatom_types + 1)
+    Elem_in_com = [""] * (atoms.iatom_types + 1)
 
-    Am_of_type = [0] * (atoms.iatom_types+1)
-    Elem_in_com = [0] * (atoms.iatom_types+1)
+    r_pair_cut = [0.0] * (atoms.ipair_types + 1)
+    r2_pair_cut = [0.0] * (atoms.ipair_types + 1)
 
-    r_pair_cut = [0] * (atoms.ipair_types+1)
-    r2_pair_cut = [0] * (atoms.ipair_types+1)
-
-    E_kin = [0] * (atoms.iatom_types+1)
-    pTemp = [0] * (atoms.iatom_types+1)
+    E_kin = [0.0] * (atoms.iatom_types + 1)
+    pTemp = [0.0] * (atoms.iatom_types + 1)
     filename = ""
 
     ierror = 0
@@ -405,18 +397,17 @@ def alloc_pot_types( ierror):
 # ! ---------------------------------------------------------------------
 # !
 
-def deall_pot_types(ierror):
+def deall_pot_types():
 
     global elem_symb,filename,ielement,natoms_of_type,iZ_elem_in_com,amass,sum_mass,gram_mol,Am_of_type,Elem_in_com
     global r_pair_cut,r2_pair_cut,E_kin,pTemp
 
-
-    ialloc = [0] * (14+1)
+    ialloc = [0] * (14 + 1)
 
     if elem_symb:
         elem_symb.clear()
     if filename:
-        filename.clear()
+        filename = ""
 
     if ielement:
         ielement.clear()

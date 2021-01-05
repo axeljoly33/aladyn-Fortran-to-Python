@@ -102,18 +102,16 @@ import random
 import torch
 import math
 
+import PROGRAM_END
 import aladyn_sys
 import sys_ACC
-
 import atoms
 import sim_box
 import constants
 import pot_module
 import node_conf
 import group_conf
-
 import MD
-
 import aladyn_IO
 import aladyn_ANN
 
@@ -121,31 +119,6 @@ import aladyn_ANN
 # !
 # !-------------------------------------------------------------------
 # !
-
-def PROGRAM_END(ierr):
-    #use sys_OMP
-    #use sys_ACC
-    #use sim_box
-    #use pot_module
-    #use atoms
-    #use ANN
-
-    ierror = 0
-
-    ierror = atoms.deall_atoms_sys(ierror)
-    ierror = atoms.deall_atoms_MD(ierror)
-
-    aladyn_ANN.deall_types_ANN(ierror)
-    aladyn_ANN.deall_atoms_ANN(ierror)
-
-    ierror = sim_box.deall_buffers(ierror)
-    ierror = pot_module.deall_pot_types(ierror)
-    ierror = sim_box.deall_cells(ierror)
-
-    if ierr != 0:
-        sys.exit("")    # ! PROGRAM_END was called due to an error !
-                        # ! STOP the execution, otherwise continue !
-    # ! End of PROGRAM_END !
 
 # !
 # ! **********************************************************************
@@ -1149,8 +1122,8 @@ def ParaGrandMC():
     # use sim_box
     # use IO
 
-    mynod = 0
-    mpi_nodes = 1
+    sim_box.mynod = 0
+    sim_box.mpi_nodes = 1
 
     aladyn_IO.read_Args()
 
@@ -1168,7 +1141,7 @@ def ParaGrandMC():
     SIM_run()
 
     print('NORMAL termination of the program.')
-    PROGRAM_END(0)
+    PROGRAM_END.PROGRAM_END(0)
 
     return
     # ! END OF MAIN PROGRAM !

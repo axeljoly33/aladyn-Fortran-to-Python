@@ -272,27 +272,27 @@ def write_structure_plt():
 #
 
 def read_pot_dat():
+
     # use constants
 
-    pot_module.filename = ""
+    filename0 = ""
 
     ierror = 0
 
     r_ADP_cut = 0.0
-    iatom_types = 1  # ! Number of chemical elements !
+    atoms.iatom_types = 1  # ! Number of chemical elements !
 
     # ==== Reading chemical species and filenames of the potential ======
 
-    ifile_numbs = iatom_types * (iatom_types + 1) / 2
-    ipair_types = pow(iatom_types, 2)
+    pot_module.ifile_numbs = atoms.iatom_types * (atoms.iatom_types + 1) / 2
+    atoms.ipair_types = pow(atoms.iatom_types, 2)
 
-    pot_module.alloc_pot_types(ierror)  # ! in pot_module !
+    pot_module.alloc_pot_types()  # ! in pot_module !
     # ! allocates arrays that are common to ALL pot file types and formats !
 
     sim_box.error_check(ierror, 'alloc_pot_types error in read_pot_dat...')
 
     pot_module.ielement[0] = 0
-    print("debug yann pot_module.elem_symb ", len(pot_module.elem_symb))
     pot_module.elem_symb[1] = 'Al'
     pot_module.gram_mol[1] = 26.982
     ielem = pot_module.numb_elem_Z(pot_module.elem_symb[1])
@@ -301,23 +301,24 @@ def read_pot_dat():
     # ! convert to atomic units !
     # ! atu = 100.0/(cavog * evjoul) = 0.010364188 eV.ps^2/nm^2 !
 
-    iPOT_func_type = 1
+    pot_module.iPOT_func_type = 1
     pot_module.filename = './ANN.dat'
 
-    print(' CHEMICAL ELEMENTS:', '   TYPE   ELEMENT', '    Z    Atomic Mass  POT_func_type')
-    for i in range(1, iatom_types + 1):
-        print("debug yann iatom_types ", iatom_types)
-        print(i, pot_module.elem_symb[i], pot_module.ielement[i],
-              pot_module.gram_mol[i], iPOT_func_type)
+    print('CHEMICAL ELEMENTS:', '   TYPE   ELEMENT', '    Z    Atomic Mass  POT_func_type')
+    for i in range(1, atoms.iatom_types + 1):
+        print('                       ', i, '    ', pot_module.elem_symb[i], '     ',
+              pot_module.ielement[i], '   ', pot_module.gram_mol[i], '        ', pot_module.iPOT_func_type)
 
-    nelem_in_com = iatom_types
+    pot_module.nelem_in_com = atoms.iatom_types
 
-    iPOT_file_type = 10  # ! ANN file with a trained NN !
+    pot_module.iPOT_file_type = 10  # ! ANN file with a trained NN !
 
     print('Potential file format: ANN')
-    n_pot_files = 1
+    pot_module.n_pot_files = 1
 
-    MC_rank = 3
+    sim_box.MC_rank = 3
+
+    return
     # ! End of read_pot_dat !
 
 #
@@ -600,11 +601,11 @@ def read_Args():
 
     # ! Default values: !
     iver = 0
-    nstep = 10
-    measure_step = 1
-    dt_step = 0.001  # ! 1 fs = 0.001 ps !
-    start_time = 0.0
-    T_set = 100.0  # ! K !
+    sim_box.nstep = 10
+    sim_box.measure_step = 1
+    atoms.dt_step = 0.001  # ! 1 fs = 0.001 ps !
+    sim_box.start_time = 0.0
+    sim_box.T_set = 100.0  # ! K !
 
     k = 0
     N_args = len(sys.argv)
@@ -622,19 +623,19 @@ def read_Args():
         elif (str_opt == '-n') or (str_opt == '-N'):
             str_num = GETARG[k]
             k += 1
-            nstep = str_num
-            print('- Executing ', nstep, ' MD steps')
+            sim_box.nstep = str_num
+            print('- Executing ', sim_box.nstep, ' MD steps')
         elif (str_opt == '-m') or (str_opt == '-M'):
             str_num = GETARG[k]
             k += 1
-            measure_step = str_num
-            print('- Measure at each ', measure_step, ' MD steps')
+            sim_box.measure_step = str_num
+            print('- Measure at each ', sim_box.measure_step, ' MD steps')
         # ! if((str_opt(1:2)... !
 
     # ! do while(k.le.N_args) !
 
-    nodes_on_Y = 1
-    nodes_on_Z = 1
+    sim_box.nodes_on_Y = 1
+    sim_box.nodes_on_Z = 1
 
     # ! End of read_Args !
 

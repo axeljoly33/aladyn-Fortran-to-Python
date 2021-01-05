@@ -4,11 +4,12 @@ import numpy as np
 import random
 import torch
 import math
+
 import node_conf
+import PROGRAM_END
 
 
 # *** Set some working parameters here ***
-#mynode_conf = node_conf
 
 file_path = "./"
 Max_Lines_INI = 1024
@@ -287,16 +288,16 @@ def matinv( a, b):
 # ! ---------------------------------------------------------------------
 # !
 
-def alloc_nodes( nodes, ierror):
+def alloc_nodes(nodes, ierror):
 
-    global nbuf,nufa
+    global nbuf, nbufa
 
-    ialloc = [0] * (2+1)
+    ialloc = [0] * (2 + 1)
 
     # ! if (mynod.eq.0) write(6, * )'alloc_nodes(', nodes, ')'
 
-    nbuf = [0] * (nodes+1)
-    nbufa = [0] * (nodes+1)
+    nbuf = [0] * (nodes + 1)
+    nbufa = [0] * (nodes + 1)
 
     ierror = 0
     for i in range(1, 2 + 1):
@@ -345,12 +346,12 @@ def alloc_buffers(ierror):
 # ! ---------------------------------------------------------------------
 # !
 
-def deall_buffers(ierror):
+def deall_buffers():
 
     global buf,bufa,bufb,bufc,ibufY1,ibufY2,ibufZ1,ibufZ2
     global kbuf,kbufa,kbufb,kbufc,ncell_of_atom
 
-    ialloc = [0] * (14+1)
+    ialloc = [0] * (14 + 1)
 
     if buf:
         buf.clear()
@@ -415,11 +416,11 @@ def alloc_cells(ierror):
 # ! ---------------------------------------------------------------------
 # !
 
-def deall_cells(ierror):
+def deall_cells():
 
     global id_of_cell,natoms_in_cell,n_in_cell,n_of_moved_atom
 
-    ialloc = [0] * (4+1)
+    ialloc = [0] * (4 + 1)
 
     if id_of_cell:
         id_of_cell.clear()
@@ -448,8 +449,10 @@ def error_check(ierror, message):
     if ierror != 0:
         if mynod == 0:
             print(message)
-        print("Le programme s'est arreter sur une erreur detecter par le programme original aladyn.")
-        sys.exit("")
+        print("The program halted on an error detected by the original Aladyn program")
+        PROGRAM_END.PROGRAM_END(1)
+
+    return
     # ! End of error_check !
 
 # ! End of sim_box !
