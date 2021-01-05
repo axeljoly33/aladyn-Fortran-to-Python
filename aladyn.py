@@ -905,7 +905,7 @@ def read_pot():
     aladyn_IO.read_pot_dat()  # ! get iatom_types, ifile_numbs, call alloc_types !
 
     # ! alloc_ates ANN types, alloc_ates ANN_BOP types !
-    aladyn_ANN.input_pot_ANN(pot_module.iPOT_func_type, ierror)
+    ierror = aladyn_ANN.input_pot_ANN(pot_module.iPOT_func_type)
 
     sim_box.error_check(ierror, 'ERROR in read_pot...')
 
@@ -955,30 +955,23 @@ def node_management():
     # use IO
 
     node_info = node_conf.node_conf()
-    #print('node_name=', node_info.node_name)
-    #print('devicetype=', node_info.devicetype)
-    #print('nACC_devices=', node_info.nACC_devices)
-    #print('I_have_GPU=', node_info.I_have_GPU)
-    #print('My_GPU_id=', node_info.My_GPU_id)
-    #print('MP_procs=', node_info.MP_procs)
-    #print('MP_threads=', node_info.MP_threads)
 
     my_node_name, node_name, name_of_node, name_in_group = "", "", "", ""
-    ngroup_of_node = [0]
+    ngroup_of_node = [0] * (1 + 1)
 
     get_node_config(node_info)
     report_node_config(node_info)
 
     ierror = 0
-    sim_box.alloc_nodes(1, ierror)
+    ierror = sim_box.alloc_nodes(1)
     sim_box.error_check(ierror, 'ERROR in alloc_nodes...')
 
-    nxold = 0
-    nyold = 0
-    nzold = 0
+    sim_box.nxold = 0
+    sim_box.nyold = 0
+    sim_box.nzold = 0
 
-    nodes_on_Y = 0
-    nodes_on_Z = 0
+    sim_box.nodes_on_Y = 0
+    sim_box.nodes_on_Z = 0
 
     return
     # ! End of node_management !
@@ -995,12 +988,12 @@ def report_node_config(node_info):
     # use sys_ACC  # ! defines devicetype !
     # use sim_box
 
-    MP_procs = node_info.MP_procs
-    MP_threads = node_info.MP_threads
-    I_have_GPU = node_info.I_have_GPU
+    sim_box.MP_procs = node_info.MP_procs
+    sim_box.MP_threads = node_info.MP_threads
+    sim_box.I_have_GPU = node_info.I_have_GPU
     My_GPU_id = node_info.My_GPU_id
-    devicetype = node_info.devicetype
-    nACC_devices = node_info.nACC_devices
+    sys_ACC.devicetype = node_info.devicetype
+    sim_box.nACC_devices = node_info.nACC_devices
 
     print(' ')
     print('-----------------------------------------------')
@@ -1010,30 +1003,30 @@ def report_node_config(node_info):
     # ! Those are replacements of ACC_ * equivalents !
     # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
 
-    if I_have_GPU > 0:
-        sys_ACC.set_device_num(My_GPU_id, devicetype)
+    if sim_box.I_have_GPU > 0:
+        sys_ACC.set_device_num(My_GPU_id, sys_ACC.devicetype)
         sys_ACC.GPU_Init(sys_ACC.acc_device_current)
         My_GPU_mem = sys_ACC.get_gpu_mem(My_GPU_id)
         My_GPU_free_mem = sys_ACC.get_gpu_free_mem(My_GPU_id)
-        print('| GPUs detected', I_have_GPU, '\n | My_GPU_id=', My_GPU_id, ' with memory of:', My_GPU_mem,
-              ' bytes, free:', My_GPU_free_mem)
+        print('| GPUs detected', sim_box.I_have_GPU, '\n | My_GPU_id=', My_GPU_id, ' with memory of:',
+              My_GPU_mem, ' bytes, free:', My_GPU_free_mem)
     else:
         print('| No GPU detected.')
 
     if My_GPU_id == -1:
-        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads and no GPU devices')
+        print('| CPUs:', sim_box.MP_procs, ' using ', sim_box.MP_threads, ' threads and no GPU devices')
     elif My_GPU_id == 0:
-        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
-              '-st GPU of devicetype=', devicetype)
+        print('| CPUs:', sim_box.MP_procs, ' using ', sim_box.MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+              '-st GPU of devicetype=', sys_ACC.devicetype)
     elif My_GPU_id == 1:
-        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
-              '-st GPU of devicetype=', devicetype)
+        print('| CPUs:', sim_box.MP_procs, ' using ', sim_box.MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+              '-st GPU of devicetype=', sys_ACC.devicetype)
     elif My_GPU_id == 2:
-        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
-              '-st GPU of devicetype=', devicetype)
+        print('| CPUs:', sim_box.MP_procs, ' using ', sim_box.MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+              '-st GPU of devicetype=', sys_ACC.devicetype)
     else:
-        print('| CPUs:', MP_procs, ' using ', MP_threads, ' threads\n | and the ', My_GPU_id + 1,
-              '-st GPU of devicetype=', devicetype)
+        print('| CPUs:', sim_box.MP_procs, ' using ', sim_box.MP_threads, ' threads\n | and the ', My_GPU_id + 1,
+              '-st GPU of devicetype=', sys_ACC.devicetype)
 
     print('|')
     print('-----------------------------------------------')
@@ -1075,35 +1068,35 @@ def check_resources(node_info):
     # ! Those are replacements of ACC_ * equivalents    !
     # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
 
-    devicetype = sys_ACC.get_device_type()
+    sys_ACC.devicetype = sys_ACC.get_device_type()
 
-    nACC_devices = sys_ACC.get_num_devices(devicetype)
+    sim_box.nACC_devices = sys_ACC.get_num_devices(sys_ACC.devicetype)
 
-    I_have_GPU = nACC_devices
+    sim_box.I_have_GPU = sim_box.nACC_devices
 
     # ! devicetype = 1 ; I_have_GPU = 1 !
     # ! Test GPU code without GPU VVVV !
 
     My_GPU_id = -1
-    if nACC_devices > 0:
+    if sim_box.nACC_devices > 0:
         My_GPU_id = 0
 
     # ! Those are replacements of OMP_ * equivalents !
     # ! redefined in pgmc_sys_OMP.f and pgmc_sys_ACC.f !
 
-    MP_procs = aladyn_sys.GET_NUM_PROCS()
+    sim_box.MP_procs = aladyn_sys.GET_NUM_PROCS()
 
-    MP_max_threads = aladyn_sys.GET_MAX_THREADS()
+    sim_box.MP_max_threads = aladyn_sys.GET_MAX_THREADS()
 
     # ! MP_threads = aladyn_sys.GET_NUM_THREADS() !
-    MP_threads = MP_max_threads
+    sim_box.MP_threads = sim_box.MP_max_threads
 
-    node_info.MP_procs = MP_procs
-    node_info.MP_threads = MP_threads
-    node_info.I_have_GPU = I_have_GPU
+    node_info.MP_procs = sim_box.MP_procs
+    node_info.MP_threads = sim_box.MP_threads
+    node_info.I_have_GPU = sim_box.I_have_GPU
     node_info.My_GPU_id = My_GPU_id
-    node_info.devicetype = devicetype
-    node_info.nACC_devices = nACC_devices
+    node_info.devicetype = sys_ACC.devicetype
+    node_info.nACC_devices = sim_box.nACC_devices
 
     return node_info
     # ! End of check_resources !

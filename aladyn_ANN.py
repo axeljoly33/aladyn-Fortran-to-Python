@@ -72,6 +72,7 @@ import numpy as np
 import random
 import torch
 import math
+
 #import aladyn_sys
 import atoms
 import sim_box
@@ -88,38 +89,30 @@ import group_conf
 # ------------------------------------------------------------------
 #
 
-# uMODULE ANN
+# use sys_OMP #sys NO OMP / sys /sys ACC/sys omp
+# use constants
+# use sim_box
+# use pot_module
+# save
 
-# u	  use sys_OMP #sys NO OMP / sys /sys ACC/sys omp
-# u	  use constants
-# u	  use sim_box
-# u	  use pot_module
-# u	  save
+Max_net_layers = 8
+n_set_ann = 0
+net_atom_types = 0
+iflag_ann = 0
+net_layers = 0
+net_in = 0
+net_out = 0
+mG_dim = 0
+max_tri_index = 0
 
-Max_net_layers = 8      # integer, parameter
-n_set_ann = -1          # integer
-net_atom_types = -1     # integer
-iflag_ann = -1          # integer
-net_layers = -1         # integer
-net_in = -1             # integer
-net_out = -1            # integer
-mG_dim = -1             # integer
-max_tri_index = -1      # integer
+Rc_ann = 0.0
+d_ann = 0.0
+d4_ann = 0.0
+Gauss_ann = 0.0
+range_min_ann = 0.0
+ActFunc_shift = 0.0
 
-net_layers = -1         # integer
-net_in = -1             # integer
-net_out = -1            # integer
-mG_dim = -1             # integer
-max_tri_index = -1      # integer
-
-Rc_ann = -2.0           # double
-d_ann = -2.0            # double
-d4_ann = -2.0           # double
-Gauss_ann = -2.0        # double
-range_min_ann = -2.0    # double
-ActFunc_shift = -2.0    # double
-
-Nodes_of_layer = []     # 1 dim, int LNS a l'origine un entier
+Nodes_of_layer = [0] * (Max_net_layers + 1)
 
 r0_value = []           # 1 dim , double
 r0G_value = []          # 1 dim , double
@@ -196,7 +189,7 @@ dBOP_param_dxij_ = []   # 4 dim , double
 """
 
 
-def input_pot_ANN(ipot_type, ierror):
+def input_pot_ANN(ipot_type):
     global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
     global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
     global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
@@ -204,83 +197,69 @@ def input_pot_ANN(ipot_type, ierror):
     global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
     global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
 
-    ipot_type = -1  # integer, intent(in)
-    ierror_type = -1  # integer, intent(out)
-    ierr = -1  # integer
-    WT_ann = []  # 2 dim , double
+    ierror = 0
+    ierr = 0
+    WT_ann = [[]]  # double
 
-    LINE = ""  # character*200
-    elem_symb_pot = []  # character*4 elem_symb_pot(112) ! maximum numb. elements possible !
-    gram_mol_pot = []  # double precision gram_mol_pot(112)
+    LINE = ""
+    err_msg = ""
+    elem_symb_pot = [""] * (112 + 1)  # ! maximum numb. elements possible !
+    gram_mol_pot = [0.0] * (112 + 1)
 
     ierr = 0
     net_in = 0
     net_out = 0
     net_atom_types = 1
 
-    Nodes_of_layer = []  # etrange, Nodes_of_layer est une variable global a priorie entiere
-    # on va considerer que c'est un tableau d'entier
+    Nodes_of_layer = [0] * (Max_net_layers + 1)
     nunit = 40  # ! ANN file !
 
-    err_msg = ' '  # character*200
+    err_msg = ' '
     ierror = 0
 
-    print("debug yann file name as in ANN 228: ", pot_module.filename)
-
-    nunit = open(pot_module.filename, "r")  # open (nunit,file=filename(1),status='old')
+    nunit = open(pot_module.filename, "r")
 
     print(' ')
-    print(' READING pot file: ' , pot_module.filename , '...')  # ./ANN.DAT
+    print('READING pot file: ' , pot_module.filename , '...')
 
-    """
-    ! *** Start reading the Artificial Neural Network file *.ann ***
-    """
-    LINE = nunit.readline()  # ! 1st Line ! read(nunit,fmt=50,IOSTAT=ierr)
+    # ! *** Start reading the Artificial Neural Network file *.ann ***
 
-    iPOT_file_ver = LINE[1]  # LINE =" 0 version number"
-    """
-    !	 write(6,*)' ANN version:',iPOT_file_ver
-    """
+    LINE = nunit.readline()  # ! 1st Line !
+    pot_module.iPOT_file_ver = LINE[1]  # ! pot file version !
+    # !	 write(6,*)' ANN version:',iPOT_file_ver
 
-    LINE = nunit.readline()  # LINE  ! 2nd Line !
-    net_atom_types = int(LINE[1])  # LINE = " 1 - number of chemical species in the system"  ! number of chemical elem. !
-
-    # -
-    elem_symb_pot.append('')  # first empty pos
-    gram_mol_pot.append('0.0')  # first empty pos
+    LINE = nunit.readline()  # ! 2nd Line !
+    net_atom_types = int(LINE[1])  # ! number of chemical elem. !
 
     for i in range(1, net_atom_types + 1):
-        print("debug")
-        myLine = nunit.readline()  # 'Al'  26.982 - element symbol and weight
+        myLine = nunit.readline()
         myData = myLine.split()
         myData[0] = myData[0].split('\'')[1]
 
-        elem_symb_pot.append(myData[0])  # 'Al'
-        gram_mol_pot.append(float(myData[1]))  # '26.982'
+        elem_symb_pot[i] = myData[0]
+        gram_mol_pot[i] = float(myData[1])
 
-    print(' ')
+    print('')
     print('Elements in ANN potential file:')
-    print(elem_symb_pot , ' ' , net_atom_types)
+    print(elem_symb_pot[1], ' ', net_atom_types)
 
-    for i in range(1, atoms.iatom_types + 1):  # ! element from pot.dat file !
-        ierror = 1  # ! assume element not found  !
+    for i in range(1, atoms.iatom_types + 1):   # ! element from pot.dat file !
+        ierror = 1                              # ! assume element not found  !
         for n in range(1, net_atom_types + 1):  # ! element from lammps pot file !
             nelem = pot_module.numb_elem_Z(elem_symb_pot[n])
             if nelem == pot_module.ielement[i]:
                 pot_module.ipot[n] = i  # ! so that ielement(ipot(n)) = ielement(i) !
                 ierror = 0
-        if (ierror != 0):
-            print(elem_symb[i] , '' , pot_module.filename)
+        if ierror != 0:
+            print('ERROR: Element ', pot_module.elem_symb[i], ' from pot.dat not in ', pot_module.filename)
     print(' ')
 
-    err_msg = 'ERROR elements in ANN pot file do not match' , 1 , ' those in the pot.dat file!'  # LNS
-    print(err_msg)
+    err_msg = 'ERROR elements in ANN pot file do not match those in the pot.dat file!'
 
     sim_box.error_check(ierror, err_msg)
 
     if sim_box.mynod == 0:
-
-        LINE = nunit.readline()  # 0 0.100000 6.000000 1.500000 1.000000 1 ! 1st NN-data Line !
+        LINE = nunit.readline()  # ! 1st NN-data Line !
         myData = LINE.split()
         iflag_ann = int(myData[0])
         range_min_ann = float(myData[1])
@@ -288,62 +267,61 @@ def input_pot_ANN(ipot_type, ierror):
         d_ann = float(myData[3])
         Gauss_ann = float(myData[4])
         # 1 is missing?
-        # format(A)
 
         LINE = nunit.readline()  # ! 2nd NN-data Line !
-        # 12 2.00 2.20 2.40 2.60 2.80 3.00 3.40 3.80 4.20 4.60 5.00 5.40
         myData = LINE.split()
-
         if ierr == 0:
             n_set_ann = int(myData[0])
             if n_set_ann > 0:
-
-                r0_value.append(0.0)  # first empty pos
+                r0_value = [0.0] * (n_set_ann + 1)
                 if ierr == 0:
-                    print("debug")
-                    for i in range(1, n_set_ann + 1):  # la pos 0 du tableau est vide
-                        r0_value.append(float(myData[i]))  # mydata 0 correspond a autre chose.
-
+                    for i in range(1, n_set_ann + 1):
+                        r0_value[i] = float(myData[i])
             else:
-                ierr = 1;
-                print('ERROR: No Gaussian positions in line 2 in ' , pot_module.filename)
+                ierr = 1
+                print('ERROR: No Gaussian positions in line 2 in ', pot_module.filename)
             if ierr == 0:
-                print(n_set_ann , ' ' , r0_value)
+                print('Gaussian positions:', n_set_ann, ':', end='')
+                for i in range(1, n_set_ann + 1):
+                    print(' ', r0_value[i], end='')
+                print('')
 
         LINE = nunit.readline()  # ! 3rd NN-data Line !
-
         if ierr == 0:
-            myData = LINE.split()  # 4 60 20 20 1
+            myData = LINE.split()
             net_layers = int(myData[0])
             if (0 < net_layers) and (net_layers <= Max_net_layers):
-
-                Nodes_of_layer.append(0)  # first empty pos
                 for i in range(1, net_layers + 1):
-                    Nodes_of_layer.append(int(myData[i]))
-
+                    Nodes_of_layer[i] = int(myData[i])
                 net_in = Nodes_of_layer[1]
                 net_out = Nodes_of_layer[net_layers]
                 net_in_check = 5 * n_set_ann * atoms.iatom_types
                 if net_in != net_in_check:
                     ierr = 1
-                    print(net_in , ' ' , net_in_check , ' ' , n_set_ann , ' ' , atoms.iatom_types)
+                    print('ERROR: Inconsistency b/n the number of input net nodes:', net_in,
+                           ' and Structure Parameters:', net_in_check, ' = 5 *', n_set_ann, ' * ', atoms.iatom_types)
             else:
                 ierr = 1
-                print('ERROR: Incorect Net layers in line 3 in ' , pot_module.filename)
-                print(net_layers , ' ' , Max_net_layers)
-                print('Number of Net layers = ' , i3 , ' must be between 1 and ' , i2)
+                print('ERROR: Incorrect Net layers in line 3 in ', pot_module.filename)
+                print('Number of Net layers = ', net_layers, ' must be between 1 and ', Max_net_layers)
 
             if ierr == 0:
-                print(net_layers , ' ' , Nodes_of_layer)
-                """
-                !	 write(6,20) net_atom_types, net_in, net_out, Rc_ann, d_ann
-                """
-    sim_box.error_check(ierr, 'ERROR reading ANN file in input_pot_ANN')
-    sim_box.error_check(net_atom_types - atoms.iatom_types, 'ERROR: Elements in ANN file and pot.dat do not match!')
+                print('NN layers=:', net_layers, 'of nodes:', end='')
+                for i in range(1, net_layers + 1):
+                    print(' ', Nodes_of_layer[i], end='')
+                print('')
 
-    if iPOT_file_ver == 0 or iPOT_file_ver == 1:
+                # !	 write(6,20) net_atom_types, net_in, net_out, Rc_ann, d_ann
+
+    sim_box.error_check(ierr, 'ERROR reading ANN file in input_pot_ANN')
+    sim_box.error_check((net_atom_types - atoms.iatom_types), 'ERROR: Elements in ANN file and pot.dat do not match!')
+
+    ### AXEL => EVALUATION MISE EN PAUSE ICI (aller sur le Google Sheet pour voir l'avancement de la double évaluation)
+    ### double évaluation => axel regarde et valide après que yann sois passé une première fois et ait validé une première fois
+
+    if pot_module.iPOT_file_ver == 0 or pot_module.iPOT_file_ver == 1:
         ActFunc_shift = 0.0  # ! f(x) = 1/(1+exp(-x)) !
-    elif iPOT_file_ver == 2:
+    elif pot_module.iPOT_file_ver == 2:
         ActFunc_shift = -0.5  # ! f(x) = 1/(1+exp(-x)) - 0.5 !
     else:
         ActFunc_shift = 0.0  # ! f(x) = 1/(1+exp(-x)) !
@@ -492,7 +470,10 @@ def input_pot_ANN(ipot_type, ierror):
                 W1_ann[icol][i] = WT_ann[ind][i]
     print ("debug yann taille apres mise en commun W1: ",len(W1_ann) ,"WT: ",len(WT_ann))
     WT_ann = []
-    ierror = ierr  # surement inutile.
+    ierror = ierr
+
+    return ierror
+    # ! End of input_pot_ANN !
 
 
 # f  format('Gaussian positions:',i3,':',32f6.2)

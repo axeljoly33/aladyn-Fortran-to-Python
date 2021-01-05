@@ -288,7 +288,7 @@ def matinv( a, b):
 # ! ---------------------------------------------------------------------
 # !
 
-def alloc_nodes(nodes, ierror):
+def alloc_nodes(nodes):
 
     global nbuf, nbufa
 
