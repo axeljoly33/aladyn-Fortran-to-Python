@@ -67,15 +67,15 @@ BkT = 0.0  # ! = 1.0d0 / (Boltz_Kb * T_sys) !
 real_time, start_time, start_run_time = 0.0, 0.0, 0.0
 T_sys, T_set, Ek_sys = 0.0, 0.0, 0.0
 
-h = [[0.0] * 4 for i1 in range(4)]
-hi = [[0.0] * 4 for i2 in range(4)]
+h = [[0.0] * (3 + 1) for i1 in range(3 + 1)]
+hi = [[0.0] * (3 + 1) for i2 in range(3 + 1)]
 
 # ! System shape matrices !
-h1 = [[0.0] * 4 for i3 in range(4)]
-h2 = [[0.0] * 4 for i4 in range(4)]
-h3 = [[0.0] * 4 for i5 in range(4)]
-h4 = [[0.0] * 4 for i6 in range(4)]
-h5 = [[0.0] * 4 for i7 in range(4)]
+h1 = [[0.0] * (3 + 1) for i3 in range(3 + 1)]
+h2 = [[0.0] * (3 + 1) for i4 in range(3 + 1)]
+h3 = [[0.0] * (3 + 1) for i5 in range(3 + 1)]
+h4 = [[0.0] * (3 + 1) for i6 in range(3 + 1)]
+h5 = [[0.0] * (3 + 1) for i7 in range(3 + 1)]
 
 h11, h12, h13, h22, h23, h33 = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 hi11, hi12, hi13, hi22, hi23, hi33 = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0

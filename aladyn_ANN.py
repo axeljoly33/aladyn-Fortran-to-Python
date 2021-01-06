@@ -117,25 +117,25 @@ Nodes_of_layer = [0] * (Max_net_layers + 1)
 r0_value = []           # 1 dim , double
 r0G_value = []          # 1 dim , double
 
-Gi_atom = []            # 3 dim , double
-dG_i = []               # 3 dim , double
+Gi_atom = [[[]]]        # 3 dim , double
+dG_i = [[[]]]           # 3 dim , double
 
-Gi_list = []            # 2 dim , double
-Gi_new = []             # 2 dim , double
+Gi_list = [[]]          # 2 dim , double
+Gi_new = [[]]           # 2 dim , double
 
 U0 = []                 # 1 dim , double
 U1 = []                 # 1 dim , double
 U2 = []                 # 1 dim , double
 
-W1_ann = []             # 2 dim , double
-W3_ann = []             # 2 dim , double
-W2_ann = []             # 3 dim , double
+W1_ann = [[]]           # 2 dim , double
+W3_ann = [[]]           # 2 dim , double
+W2_ann = [[[]]]         # 3 dim , double
 
 B1_ann = []             # 1 dim , double
 B3_ann = []             # 1 dim , double
-B2_ann = []             # 2 dim , double
+B2_ann = [[]]           # 2 dim , double
 
-dBOP_param_dxij = []    # 4 dim , double
+dBOP_param_dxij = [[[[]]]]    # 4 dim , double
 
 buf_ann = []            # 1 dim , double
 
@@ -147,47 +147,45 @@ U1f2 = []               # 1 dim , double
 U2f2 = []               # 1 dim , double
 U1f3 = []               # 1 dim , double
 U2f3 = []               # 1 dim , double
-Gi_dev = []             # 2 dim , double
-xr_ij0 = []             # 2 dim , double
-xr_ij1 = []             # 2 dim , double
-xr_ij2 = []             # 2 dim , double
-xr_ij3 = []             # 2 dim , double
-xr_ij_dev = []          # 3 dim , double
-fsij_dev = []           # 3 dim , double
-dfuN_dev = []           # 3 dim , double
-Gi_3D_dev1 = []         # 3 dim , double
-Gi_3D_dev2 = []         # 3 dim , double
-Gi_3D_dev3 = []         # 3 dim , double
-dfs_rij_3D1 = []        # 3 dim , double
-dfs_rij_3D2 = []        # 3 dim , double
-dfs_rij_3D3 = []        # 3 dim , double
-dfs_rij_3D = []         # 4 dim , double
-Gi_3D_dev = []          # 4 dim , double
-dBOP_param_dxij_ = []   # 4 dim , double
+Gi_dev = [[]]           # 2 dim , double
+xr_ij0 = [[]]           # 2 dim , double
+xr_ij1 = [[]]           # 2 dim , double
+xr_ij2 = [[]]           # 2 dim , double
+xr_ij3 = [[]]           # 2 dim , double
+xr_ij_dev = [[[]]]      # 3 dim , double
+fsij_dev = [[[]]]       # 3 dim , double
+dfuN_dev = [[[]]]       # 3 dim , double
+Gi_3D_dev1 = [[[]]]     # 3 dim , double
+Gi_3D_dev2 = [[[]]]     # 3 dim , double
+Gi_3D_dev3 = [[[]]]     # 3 dim , double
+dfs_rij_3D1 = [[[]]]    # 3 dim , double
+dfs_rij_3D2 = [[[]]]    # 3 dim , double
+dfs_rij_3D3 = [[[]]]    # 3 dim , double
+dfs_rij_3D = [[[[]]]]   # 4 dim , double
+Gi_3D_dev = [[[[]]]]    # 4 dim , double
+dBOP_param_dxij_ = [[[[]]]]   # 4 dim , double
 
-"""
-! --- TEST arrays ---
-!	 double precision, dimension(:,:), allocatable :: Gi_cp
-"""
+
+# ! --- TEST arrays ---
+# !	 double precision, dimension(:,:), allocatable :: Gi_cp
+
 # u	  CONTAINS
-"""
-!--------------------------------------------------------------------
-! This subroutine reads in data from files set in pot.dat file 
-! describing a trained Neural Network for a specific potential format
-! ipot_type = iPOT_func_type = 100:straight ANN; 106: BOP ANN;
-!
-! FORMAT:
-! iflag_ann,range_min_ann,Rc_ann,d_ann,Gauss_ann
-! n_set_ann, (r0_value(i), i=1,n_set_ann)
-! w1(1,1), w1(1,2),…w1(1,20), w1(2,1),w1(2,2),…w1(60,20)
-! b1(1), b1(2),…b1(20)
-! w2(1,1), w2(1,2),…w2(1,20), w2(2,1),w2(2,2),…w2(20,20)
-! b2(1), b2(2),…b2(20)
-! w3(1,1), w3(2,1), w3(3,1),…w3(20,1)
-! b3(1)
-!--------------------------------------------------------------------
-"""
 
+# !--------------------------------------------------------------------
+# ! This subroutine reads in data from files set in pot.dat file
+# ! describing a trained Neural Network for a specific potential format
+# ! ipot_type = iPOT_func_type = 100:straight ANN; 106: BOP ANN;
+# !
+# ! FORMAT:
+# ! iflag_ann,range_min_ann,Rc_ann,d_ann,Gauss_ann
+# ! n_set_ann, (r0_value(i), i=1,n_set_ann)
+# ! w1(1,1), w1(1,2),…w1(1,20), w1(2,1),w1(2,2),…w1(60,20)
+# ! b1(1), b1(2),…b1(20)
+# ! w2(1,1), w2(1,2),…w2(1,20), w2(2,1),w2(2,2),…w2(20,20)
+# ! b2(1), b2(2),…b2(20)
+# ! w3(1,1), w3(2,1), w3(3,1),…w3(20,1)
+# ! b3(1)
+# !--------------------------------------------------------------------
 
 def input_pot_ANN(ipot_type):
     global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
@@ -225,7 +223,7 @@ def input_pot_ANN(ipot_type):
     # ! *** Start reading the Artificial Neural Network file *.ann ***
 
     LINE = nunit.readline()  # ! 1st Line !
-    pot_module.iPOT_file_ver = LINE[1]  # ! pot file version !
+    pot_module.iPOT_file_ver = int(LINE[1])  # ! pot file version !
     # !	 write(6,*)' ANN version:',iPOT_file_ver
 
     LINE = nunit.readline()  # ! 2nd Line !
@@ -311,13 +309,10 @@ def input_pot_ANN(ipot_type):
                     print(' ', Nodes_of_layer[i], end='')
                 print('')
 
-                # !	 write(6,20) net_atom_types, net_in, net_out, Rc_ann, d_ann
+                # !	write(6,20) net_atom_types, net_in, net_out, Rc_ann, d_ann !
 
     sim_box.error_check(ierr, 'ERROR reading ANN file in input_pot_ANN')
     sim_box.error_check((net_atom_types - atoms.iatom_types), 'ERROR: Elements in ANN file and pot.dat do not match!')
-
-    ### AXEL => EVALUATION MISE EN PAUSE ICI (aller sur le Google Sheet pour voir l'avancement de la double évaluation)
-    ### double évaluation => axel regarde et valide après que yann sois passé une première fois et ait validé une première fois
 
     if pot_module.iPOT_file_ver == 0 or pot_module.iPOT_file_ver == 1:
         ActFunc_shift = 0.0  # ! f(x) = 1/(1+exp(-x)) !
@@ -326,173 +321,107 @@ def input_pot_ANN(ipot_type):
     else:
         ActFunc_shift = 0.0  # ! f(x) = 1/(1+exp(-x)) !
 
-    r0G_value.append(0.0)
-    for i in range(1, n_set_ann + 1):
-        # r0G_value(:) = r0_value(:)/Gauss_ann
-        r0G_value.append(r0_value[i] / Gauss_ann)
-
+    r0G_value = [0.0] * (n_set_ann + 1)
     sim_box.error_check(ierr, 'ERROR allocate r0G_value in input_pot_ANN')
+    for i in range(1, n_set_ann + 1):
+        r0G_value[i] = r0_value[i] / Gauss_ann
 
-    alloc_types_ANN(ierr)
+    alloc_types_ANN()
     sim_box.error_check(ierr, 'ERROR alloc_types_ANN in input_pot_ANN')
 
     ierr = 0
-    ww = 0.0
-    bb = 0.0
+    ww, bb = 0.0, 0.0
 
-    """
-    ! --- Read Input Layer Parameters for atom of type itype ---
-    """
+    # ! --- Read Input Layer Parameters for atom of type itype ---
+
     Ncolumns = Nodes_of_layer[1]  # ! 60 !
-    print("debut yann, Ncolumns: ", Ncolumns)
     Nraws = Nodes_of_layer[2]  # ! 20 !
-    W1_ann.append([])  # first empty pos
-    for icol in range(1, Ncolumns + 1):  # ! 1.. 60 !
-        W1_ann.append([])
-        W1_ann[icol].append(0.0)  # first empty pos
-        for iraw in range(1, Nraws + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
-
+    for iraw in range(1, Nraws + 1):  # ! 1.. 60 !
+        for icol in range(1, Ncolumns + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
             LINE = nunit.readline()  # ! ANN Line ! 7-1206
-            myData = LINE.split()  # 4.07328794e-01  0.0000
-
+            myData = LINE.split()
             if ierr == 0:
-                W1_ann[icol].append(float(myData[0]))
-                # a quoi ça sert ça? c'est toujours 0.0
+                W1_ann[iraw][icol] = float(myData[0])
                 dumb = float(myData[1])
-    print("debut yann W1ann taille: ", len(W1_ann))
-
-    B1_ann.append(0.0)  # first empty pos
-    for iraw in range(1, Nraws + 1):
-
-        LINE = nunit.readline()  # ! ANN Line !1207-1226
+    for iraw in range(1, Nraws + 1): # ! 1.. 20 !
+        LINE = nunit.readline()  # ! ANN Line ! 1207-1226
         myData = LINE.split()
         if ierr == 0:
-
-            B1_ann.append(float(myData[0]))
-            # a quoi ça sert ça? c'est toujours 0.0
+            B1_ann[iraw] = float(myData[0])
             dumb = float(myData[1])
 
-    """
-     --- Read Hidden Layers Parameters for atom of type itype ---
-    """
-    # au vu de la complexité de la forme de ce tableau, pour le moment on va le surdimentionné
-    for i1 in range(0, max(Nodes_of_layer) + 1):
-        W2_ann.append([])
-        for i2 in range(0, max(Nodes_of_layer) + 1):
-            W2_ann[i1].append([])
-            for i3 in range(0, net_layers - 2 + 1):
-                W2_ann[i1][i2].append(0.0)
-    for i1 in range(0, max(Nodes_of_layer) + 1):
-        B2_ann.append([])
-        for i2 in range(0, net_layers - 2 + 1):
-            B2_ann[i1].append(0.0)
+    # --- Read Hidden Layers Parameters for atom of type itype ---
 
-    for layer in range(2, net_layers - 2 + 1):  # ! 4-2+1 !
+    for layer in range(2, net_layers - 2 + 1): # 4 - 2 + 1 = 3
         Ncolumns = Nodes_of_layer[layer]  # ! 20 !
-        Nraws = Nodes_of_layer[layer + 1]  # !  8 !
-
-        for icol in range(1, Ncolumns + 1):  # ! 1.. 20 !
-            for iraw in range(1, Nraws + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
-                LINE = nunit.readline()  # ! ANN Line !1227-1386
-                if ierr == 0:
-                    myData = LINE.split()
-                    ww = float(myData[0])
-                W2_ann[icol][iraw][layer] = ww
-
-        for iraw in range(1, Nraws + 1):
-
-            LINE = nunit.readline()  # ! ANN Line !1387 - 1394
-            if ierr == 0:
+        Nraws = Nodes_of_layer[layer + 1]  # ! 20 !
+        for iraw in range(1, Nraws + 1):  # ! 1.. 20 !
+            for icol in range(1, Ncolumns + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
+                LINE = nunit.readline()  # ! ANN Line ! 1227-1626
                 myData = LINE.split()
+                if ierr == 0:
+                    ww = float(myData[0])
+                    dumb = float(myData[1])
+                W2_ann[iraw][icol][layer] = ww
+        for iraw in range(1, Nraws + 1):
+            LINE = nunit.readline()  # ! ANN Line ! 1627-1646
+            myData = LINE.split()
+            if ierr == 0:
                 bb = float(myData[0])
+                dumb = float(myData[1])
             B2_ann[iraw][layer] = bb
 
-    """
-    ! --- Read Output Layer Parameters for atom of type itype ---
-    """
+    # ! --- Read Output Layer Parameters for atom of type itype ---
+
     Ncolumns = Nodes_of_layer[net_layers - 1]  # ! 20 !
-    Nraws = Nodes_of_layer[net_layers]  # !  8 !
-    W3_ann.append([])  # first empty pos
-    for icol in range(1, Ncolumns + 1):
-        W3_ann.append([])
-        W3_ann[icol].append(0.0)  # first empty pos
-        for iraw in range(1, Nraws + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
-
-            LINE = nunit.readline()  # ! ANN Line ! 1395 - 1554
+    Nraws = Nodes_of_layer[net_layers]  # ! 1 !
+    for iraw in range(1, Nraws + 1):  # ! 1.. 1 !
+        for icol in range(1, Ncolumns + 1):  # ! 1.. 20: w(1,1), w(1,2), w(1,3)... !
+            LINE = nunit.readline()  # ! ANN Line ! 1647-1666
             myData = LINE.split()
-
             if ierr == 0:
-                W3_ann[icol].append(float(myData[0]))
-                # a quoi ça sert ça? c'est toujours 0.0
+                W3_ann[iraw][icol] = float(myData[0])
                 dumb = float(myData[1])
-
-    B3_ann.append(0.0)  # first empty pos
     for iraw in range(1, Nraws + 1):
-        LINE = nunit.readline()  # ! ANN Line ! 1555 - 1562
+        LINE = nunit.readline()  # ! ANN Line ! 1667-1667
         myData = LINE.split()
         if ierr == 0:
-            B3_ann.append(float(myData[0]))
-            # a quoi ça sert ça? c'est toujours 0.0
+            B3_ann[iraw] = float(myData[0])
             dumb = float(myData[1])
 
     nunit.close()
 
     sim_box.error_check(ierr, 'ERROR reading W_ann and B_ann arrays')
 
-    """
-    ! Swap index order from (n_set,l,...) to (l,n_set,...) of
-    ! the FIRST layer weights - FORTRAN order.
-    """
+    # ! Swap index order from (n_set,l,...) to (l,n_set,...) of
+    # ! the FIRST layer weights - FORTRAN order.
+
     Ncolumns = Nodes_of_layer[1]  # ! 60 !
-    Nraws = Nodes_of_layer[2]  # ! 16 !
+    Nraws = Nodes_of_layer[2]  # ! 20 !
 
-    for i in range(Ncolumns + 1):
-        WT_ann.append([])
-        for j in range(Nraws + 1):
-            WT_ann[i].append(0.0)
+    WT_ann = [[0.0] * (Ncolumns + 1) for _ in range(Nraws + 1)]
 
-
-    print ("debug yann taille avant mise en commun W1: ",len(W1_ann) ,"WT: ",len(WT_ann))
-    for i in range(len(W1_ann)):
-        for j in range(1,len(W1_ann[i])):
-            WT_ann[i].append(W1_ann[i][j])
-
+    for i in range(1, len(W1_ann)):
+        for j in range(1, len(W1_ann[0])):
+            WT_ann[i][j] = W1_ann[i][j]
 
     for l in range(0, 4 + 1):
         for n_set in range(1, n_set_ann + 1):
             ind = l * n_set_ann + n_set
             icol = (n_set - 1) * 5 + l + 1
-            if (icol == 0 or ind == 0):
-                print("error: icol et ind ne devrait pas etre egale a 0 ANN ligne 460")
+            for i in range(1, len(W1_ann)):
+                W1_ann[i][icol] = WT_ann[i][ind] ### ATTENTION : peut-être source d'erreur, j'ai pas trop checké l'utilité de ces boucles
 
-            for i in range(len(W1_ann[icol])):
-                # W1_ann(icol,:) = WT_ann(ind,:)
-                W1_ann[icol][i] = WT_ann[ind][i]
-    print ("debug yann taille apres mise en commun W1: ",len(W1_ann) ,"WT: ",len(WT_ann))
-    WT_ann = []
+    WT_ann.clear()
+
     ierror = ierr
 
     return ierror
     # ! End of input_pot_ANN !
 
-
-# f  format('Gaussian positions:',i3,':',32f6.2)
-# f  format('NN layers=:',i3,' of nodes:',10i5)
-# f   format(/,
-# f 'ERROR: Inconsistency b/n the number of input net nodes:',i4,
-# f ' and Structure Parameters:',i4,' = 5 *',i4,' * ',i2)
-# f  format(/,'ERROR: Element ',A2,' from pot.dat not in ',A,/)
-# f  format('Atom types in neural net:',i2,/,
-# f 'Structure parameters (net_in) :',i4,/,
-# f 'Potential parameters (net_out):',i4,/,
-# f 'Rc (R_cut-off) =',f8.4,',  d (in Fcut) =',f8.4,/)
-
-"""
-!--------------------------------------------------------------------
-! Called from calc_pot_param() in aladyn.f
-!--------------------------------------------------------------------
-"""
-
+# !--------------------------------------------------------------------
+# ! Called from calc_pot_param() in aladyn.f
+# !--------------------------------------------------------------------
 
 def init_param_ANN():
     global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
@@ -502,30 +431,28 @@ def init_param_ANN():
     global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
     global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
 
-    """
-    ! Get the maximum cut-off distance, r_cut_off and r2_cut_off !
-    ! and the maximum overlapping distance, rin 
-    """
-    r_cut_off = 0.0
+    # ! Get the maximum cut-off distance, r_cut_off and r2_cut_off !
+    # ! and the maximum overlapping distance, rin
+
+    pot_module.r_cut_off = 0.0
 
     mG_dim = (atoms.iatom_types * (atoms.iatom_types + 1) * n_set_ann * 5) / 2
     max_tri_index = (atoms.iatom_types * (atoms.iatom_types + 1)) / 2  # ! Upper triang. !
 
-    if mG_dim != Nodes_of_layer[1]:
+    if int(mG_dim) != Nodes_of_layer[1]:
         sim_box.error_check(1, 'ERROR dim. of Gis not equal to Nodes_of_layer(1)...')
 
-    d4_ann = d_ann ** 4  # puissance 4
-    r_cut_off = Rc_ann
-    r_max_pot = r_cut_off + 1.0  # ! Add additional 1 Ang to pot array for consistency with tabulated potentials!
-    rindr = 0.5  # ! [Ang] !
+    d4_ann = pow(d_ann, 4)
+    pot_module.r_cut_off = Rc_ann
+    pot_module.r_max_pot = pot_module.r_cut_off + 1.0  # ! Add additional 1 Ang to pot array for consistency with tabulated potentials!
+    pot_module.rindr = 0.5  # ! [Ang] !
 
+    return
+    # ! End of init_param_ANN !
 
-"""
-! ---------------------------------------------------------------------
-! Calculates Analytical derivatives and force calculation.
-! ---------------------------------------------------------------------
-"""
-
+# ! ---------------------------------------------------------------------
+# ! Calculates Analytical derivatives and force calculation.
+# ! ---------------------------------------------------------------------
 
 def Frc_ANN_OMP(ecohe):
     global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
@@ -1542,7 +1469,7 @@ def Frc_ANN_ACC(ecohe):
 """
 
 
-def alloc_types_ANN(ierror):
+def alloc_types_ANN():
     global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
     global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
     global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
@@ -1550,8 +1477,7 @@ def alloc_types_ANN(ierror):
     global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
     global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
 
-    ialloc = []
-    for i in range(8 + 1): ialloc.append(0)
+    ialloc = [0] * (8 + 1)
 
     max_cols = 1
     max_raws = 1
@@ -1569,42 +1495,26 @@ def alloc_types_ANN(ierror):
     Nraws3 = Nodes_of_layer[net_layers]
 
     nbuf_dim = Ncols1 * Nraws1 + (net_layers - 2) * max_cols * max_raws + Ncols3 * Nraws3
-    """
-    for i in range(Ncols1 + 1):
-        W1_ann.append([])
-        for j in range(Nraws1 + 1):
-            W1_ann[i].append(0.0)
 
-    for i in range(Ncols2 + 1):
-        W2_ann.append([])
-        for j in range(Nraws2 + 1):
-            W2_ann[i].append([])
-            for k in range(net_layers - 2 + 1):
-                W2_ann[i][j].append(0.0)
+    W1_ann = [[0.0] * (Ncols1 + 1) for _ in range(Nraws1 + 1)]
+    W2_ann = [[[0.0] * (net_layers - 2 + 1) for j in range(Ncols2 + 1)] for i in range(Nraws2 + 1)]
+    W3_ann = [[0.0] * (Ncols3 + 1) for _ in range(Nraws3 + 1)]
 
-    for i in range(Ncols3 + 1):
-        W3_ann.append([])
-        for j in range(Nraws3 + 1):
-            W3_ann[i].append(0.0)
+    B1_ann = [0.0] * (Nraws1 + 1)
+    B2_ann = [[0.0] * (net_layers - 2 + 1) for _ in range(Nraws2 + 1)]
+    B3_ann = [0.0] * (Nraws3 + 1)
+    buf_ann = [0.0] * (nbuf_dim + 1)
 
-    for i in range(Nraws1 + 1): B1_ann.append(0.0)
-
-    for i in range(Nraws2 + 1):
-        B2_ann.append([])
-        for j in range(net_layers - 2 + 1):
-            B2_ann[i].append(0.0)
-
-    for i in range(Nraws3 + 1): B3_ann.append(0.0)
-
-    for i in range(nbuf_dim + 1): buf_ann.append(0.0)
-    """
     ierror = 0
     for i in range(1, 7 + 1):
         ierror = ierror + ialloc[i]
 
+    return ierror
+    # ! End of alloc_types_ANN !
+
 
 """
-!						! alloc_types_ANN !
+!
 ! ---------------------------------------------------------------------
 !						! deall_types_ANN !
 """

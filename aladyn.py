@@ -904,13 +904,14 @@ def read_pot():
     ierror = 0
     aladyn_IO.read_pot_dat()  # ! get iatom_types, ifile_numbs, call alloc_types !
 
-    # ! alloc_ates ANN types, alloc_ates ANN_BOP types !
     ierror = aladyn_ANN.input_pot_ANN(pot_module.iPOT_func_type)
+    # ! alloc_ates ANN types, alloc_ates ANN_BOP types !
 
     sim_box.error_check(ierror, 'ERROR in read_pot...')
 
-    aladyn_ANN.init_param_ANN()  # ! rescales or initializes pot.param. !
-    # ! for ANN_BOP, alloc_ates BOP types too !
+    aladyn_ANN.init_param_ANN()     # ! rescales or initializes pot.param. !
+                                    # ! for ANN_BOP, alloc_ates BOP types too !
+
     sim_box.error_check(sim_box.ihalt, 'ERROR in read_pot.')
 
     return
