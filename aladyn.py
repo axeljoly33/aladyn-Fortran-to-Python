@@ -101,6 +101,7 @@ import numpy as np
 import random
 import torch
 import math
+import time
 
 import PROGRAM_END
 import aladyn_sys
@@ -773,6 +774,8 @@ def ParaGrandMC():
     # use sim_box
     # use IO
 
+    time_start_01 = time.time()
+
     sim_box.mynod = 0
     sim_box.mpi_nodes = 1
 
@@ -791,6 +794,10 @@ def ParaGrandMC():
     init_param()  # ! Calls init_vel
 
     SIM_run()
+
+    time_end_01 = time.time()
+    delta_time_01 = time_end_01 - time_start_01
+    print('Total runtime:', delta_time_01)
 
     print('NORMAL termination of the program.')
     PROGRAM_END.PROGRAM_END(0)
