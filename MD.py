@@ -79,7 +79,7 @@ import group_conf
 
 import aladyn_IO
 import aladyn_ANN
-import aladyn
+#import aladyn
 
 
 #
@@ -113,11 +113,11 @@ def correct_atoms(ndof_fl):
     x1i, xmp, afrx, Vxt, fx = 0.0, 0.0, 0.0, 0.0, 0.0
     y1i, ymp, afry, Vyt, fy = 0.0, 0.0, 0.0, 0.0, 0.0
     z1i, zmp, afrz, Vzt, fz = 0.0, 0.0, 0.0, 0.0, 0.0
-    dsx = [0.0] * 3
-    sum_dcm0 = [0.0] * 3
+    dsx = [0.0] * (3 + 1)
+    sum_dcm0 = [0.0] * (3 + 1)
 
     dt = atoms.dt_step
-    dtsqh = 0.5 * math.pow(dt, 2)
+    dtsqh = 0.5 * pow(dt, 2)
 
     for n in range(1, atoms.iatom_types + 1):
         atoms.sumPx[n] = 0.0
@@ -129,8 +129,8 @@ def correct_atoms(ndof_fl):
 
         ntp = atoms.ntype[n]
         am = pot_module.amass[ntp]
-        dtsqhM = dtsqh / am  # ! = 0.5 * dt * dt / m with dt=dt_step !
-        # ! a = - 1 / 2 * dt ^ 2 * f / m; dt = dt_step !
+        dtsqhM = dtsqh / am     # ! = 0.5 * dt * dt / m with dt=dt_step !
+                                # ! a = - 1 / 2 * dt ^ 2 * f / m; dt = dt_step !
 
         fxsn = sim_box.hi11 * atoms.frr[1][n] + sim_box.hi12 * \
                atoms.frr[2][n] + sim_box.hi13 * atoms.frr[3][n]
@@ -183,7 +183,7 @@ def correct_atoms(ndof_fl):
         atoms.sumPy[ntp] = atoms.sumPy[ntp] + am * Vyt
         atoms.sumPz[ntp] = atoms.sumPz[ntp] + am * Vzt
 
-        Ek_atm = am * (math.pow(Vxt, 2) + math.pow(Vyt, 2) + math.pow(Vzt, 2))
+        Ek_atm = am * (pow(Vxt, 2) + pow(Vyt, 2) + pow(Vzt, 2))
         pot_module.E_kin[ntp] = pot_module.E_kin[ntp] + Ek_atm  # ! mv ^ 2 !
 
         # ! do n = 1, natoms !
@@ -201,10 +201,8 @@ def correct_atoms(ndof_fl):
 
 def predict_atoms(ndof_fl):
 
-    # integer, intent( in):: ndof_fl
-
     a1i, a2i, a3i, a4i, a5i, a24, a45, a2345 = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-    dsx = [0.0] * 3
+    dsx = [0.0] * (3 + 1)
     i = 0
     kdof = 0
 
@@ -214,18 +212,18 @@ def predict_atoms(ndof_fl):
     # and are scale invariant(do not change with length units).
     #
 
-    h11 = sim_box.h[1][1]
-    h12 = sim_box.h[1][2]
-    h13 = sim_box.h[1][3]
-    h22 = sim_box.h[2][2]
-    h23 = sim_box.h[2][3]
-    h33 = sim_box.h[3][3]
-    hi11 = sim_box.hi[1][1]
-    hi12 = sim_box.hi[1][2]
-    hi13 = sim_box.hi[1][3]
-    hi22 = sim_box.hi[2][2]
-    hi23 = sim_box.hi[2][3]
-    hi33 = sim_box.hi[3][3]
+    sim_box.h11 = sim_box.h[1][1]
+    sim_box.h12 = sim_box.h[1][2]
+    sim_box.h13 = sim_box.h[1][3]
+    sim_box.h22 = sim_box.h[2][2]
+    sim_box.h23 = sim_box.h[2][3]
+    sim_box.h33 = sim_box.h[3][3]
+    sim_box.hi11 = sim_box.hi[1][1]
+    sim_box.hi12 = sim_box.hi[1][2]
+    sim_box.hi13 = sim_box.hi[1][3]
+    sim_box.hi22 = sim_box.hi[2][2]
+    sim_box.hi23 = sim_box.hi[2][3]
+    sim_box.hi33 = sim_box.hi[3][3]
 
     for i in range(1, sim_box.natoms + 1):
         a1i = atoms.x1[i]
@@ -283,11 +281,11 @@ def predict_atoms(ndof_fl):
 def T_broadcast():
 
     dt = atoms.dt_step  # ! uses the basic time step !
-    dtsq = math.pow(dt, 2)
+    dtsq = pow(dt, 2)
     Ttemp = 1.0 / (3.0 * constants.Boltz_Kb * dtsq)  # ! 1 / (3kB.T) !
 
-    Q_heat = atoms.Q_heat + atoms.A_fr / max(1, sim_box.natoms)
-    A_fr = 0.0
+    atoms.Q_heat = atoms.Q_heat + atoms.A_fr / max(1, sim_box.natoms)
+    atoms.A_fr = 0.0
 
     for ntp in range(1, atoms.iatom_types + 1):
         na = pot_module.natoms_of_type[ntp]  # ! do not use max(1, natoms_of_type()) !
@@ -299,9 +297,9 @@ def T_broadcast():
             if na > 1:
                 pot_module.pTemp[ntp] = Ttemp * \
                                                     (pot_module.E_kin[ntp] -
-                                                     (math.pow(atoms.sumPx[ntp], 2) +
-                                                      math.pow(atoms.sumPy[ntp], 2) +
-                                                      math.pow(atoms.sumPz[ntp], 2)) /
+                                                     (pow(atoms.sumPx[ntp], 2) +
+                                                      pow(atoms.sumPy[ntp], 2) +
+                                                      pow(atoms.sumPz[ntp], 2)) /
                                                      pot_module.sum_mass[ntp])
             else:
                 pot_module.pTemp[ntp] = Ttemp * pot_module.E_kin[ntp]
@@ -344,30 +342,27 @@ def get_T():
         ntp = atoms.ntype[i]
         Am = pot_module.amass[ntp]
         pot_module.Am_of_type[ntp] = pot_module.Am_of_type[ntp] + Am
-        Vx = sim_box.h[1][1] * atoms.x1[i] + \
-             sim_box.h[1][2] * atoms.y1[i] + sim_box.h[1][3] * \
-             atoms.z1[i]
-        Vy = sim_box.h[2][2] * atoms.y1[i] + \
-             sim_box.h[2][3] * atoms.z1[i]  # ! Real units !
+        Vx = sim_box.h[1][1] * atoms.x1[i] + sim_box.h[1][2] * atoms.y1[i] + sim_box.h[1][3] * atoms.z1[i]
+        Vy = sim_box.h[2][2] * atoms.y1[i] + sim_box.h[2][3] * atoms.z1[i]  # ! Real units !
         Vz = sim_box.h[3][3] * atoms.z1[i]
         atoms.sumPx[ntp] = atoms.sumPx[ntp] + Am * Vx
         atoms.sumPy[ntp] = atoms.sumPy[ntp] + Am * Vy
         atoms.sumPz[ntp] = atoms.sumPz[ntp] + Am * Vz
-        pot_module.E_kin[ntp] = pot_module.E_kin[ntp] + \
-                                            Am * (math.pow(Vx, 2) + math.pow(Vy, 2) + math.pow(Vz, 2))  # ! mv ^ 2 !
+        pot_module.E_kin[ntp] = pot_module.E_kin[ntp] + Am * \
+                                (pow(Vx, 2) + pow(Vy, 2) + pow(Vz, 2))  # ! mv ^ 2 !
 
-    Ek_sys = 0.0
-    avr_mass = 0.0
+    sim_box.Ek_sys = 0.0
+    pot_module.avr_mass = 0.0
     for k in range(1, atoms.iatom_types + 1):
         na = pot_module.natoms_of_type[k]  # ! do not use max(1, natoms_of_type(k)) !
         if na > 0:
             atoms.sumPx[k] = atoms.sumPx[k] / na
             atoms.sumPy[k] = atoms.sumPy[k] / na
             atoms.sumPz[k] = atoms.sumPz[k] / na
-            Ek_sys = Ek_sys + pot_module.E_kin[k]  # ! Sum_(mv ^ 2) !
+            sim_box.Ek_sys = sim_box.Ek_sys + pot_module.E_kin[k]  # ! Sum_(mv ^ 2) !
             pot_module.E_kin[k] = pot_module.E_kin[k] / na  # ! mv ^ 2 !
             pot_module.sum_mass[k] = pot_module.Am_of_type[k]
-            avr_mass = avr_mass + pot_module.sum_mass[k]
+            pot_module.avr_mass = pot_module.avr_mass + pot_module.sum_mass[k]
         else:
             atoms.sumPx[k] = 0.0
             atoms.sumPy[k] = 0.0
@@ -375,25 +370,23 @@ def get_T():
             pot_module.E_kin[k] = 0.0
             pot_module.sum_mass[k] = 0.0
 
-    Ek_sys = Ek_sys / (2.0 * sim_box.natoms * math.pow(dt, 2))  # ! mv ^ 2 / 2 !
-    avr_mass = avr_mass / sim_box.natoms
+    sim_box.Ek_sys = sim_box.Ek_sys / (2.0 * sim_box.natoms * pow(dt, 2))  # ! mv ^ 2 / 2 !
+    pot_module.avr_mass = pot_module.avr_mass / sim_box.natoms
 
-    T_sys = 0.0
-    Ttemp = 1.0 / (3.0 * constants.Boltz_Kb * math.pow(dt, 2))
+    sim_box.T_sys = 0.0
+    Ttemp = 1.0 / (3.0 * constants.Boltz_Kb * pow(dt, 2))
     for ntp in range(1, atoms.iatom_types + 1):
         if pot_module.natoms_of_type[ntp] > 1:  # ! more than 1 atom of type !
             pot_module.pTemp[ntp] = Ttemp * \
                                                 (pot_module.E_kin[ntp] -
-                                                 (math.pow(atoms.sumPx[ntp], 2) +
-                                                  math.pow(atoms.sumPy[ntp], 2) +
-                                                  math.pow(atoms.sumPz[ntp], 2)) /
-                                                 pot_module.sum_mass[ntp])
+                                                 (pow(atoms.sumPx[ntp], 2) +
+                                                  pow(atoms.sumPy[ntp], 2) +
+                                                  pow(atoms.sumPz[ntp], 2)) / pot_module.sum_mass[ntp])
         elif pot_module.natoms_of_type[ntp] == 1:  # ! only 1 atom of type !
-            # ! (2 / 3kT) * E_k = mv ^ 2 / 3 kT !
-            pot_module.pTemp[ntp] = Ttemp * pot_module.E_kin[ntp]
+            pot_module.pTemp[ntp] = Ttemp * pot_module.E_kin[ntp]  # ! (2 / 3kT) * E_k = mv ^ 2 / 3 kT !
         else:  # ! No atoms of type ntp !
             pot_module.pTemp[ntp] = 0.0
-        T_sys = T_sys + pot_module.pTemp[ntp] * pot_module.sum_mass[ntp] / \
+        sim_box.T_sys = sim_box.T_sys + pot_module.pTemp[ntp] * pot_module.sum_mass[ntp] / \
                 pot_module.amass[ntp] / sim_box.natoms
 
         # write(1000 + mynod, 10) ntp, natoms_of_type(ntp), pTemp(ntp), T_set,
@@ -417,22 +410,22 @@ def get_T():
 
 def initaccel():
 
-    dtsqh = 0.5 * math.pow(atoms.dt_step, 2)
+    dtsqh = 0.5 * pow(atoms.dt_step, 2)
 
-    hi11 = sim_box.hi[1][1]
-    hi12 = sim_box.hi[1][2]
-    hi13 = sim_box.hi[1][3]
-    hi22 = sim_box.hi[2][2]
-    hi23 = sim_box.hi[2][3]
-    hi33 = sim_box.hi[3][3]
+    sim_box.hi11 = sim_box.hi[1][1]
+    sim_box.hi12 = sim_box.hi[1][2]
+    sim_box.hi13 = sim_box.hi[1][3]
+    sim_box.hi22 = sim_box.hi[2][2]
+    sim_box.hi23 = sim_box.hi[2][3]
+    sim_box.hi33 = sim_box.hi[3][3]
 
     for n in range(1, sim_box.natoms + 1):
         ntp = atoms.ntype[n]
         dtsqhM = dtsqh / pot_module.amass[ntp]  # ! for predict - correct !
-        fxsn = hi11 * atoms.frr[1][n] + hi12 * atoms.frr[2][n] + \
-               hi13 * atoms.frr[3][n]
-        fysn = hi22 * atoms.frr[2][n] + hi23 * atoms.frr[3][n]  # ! S - space !
-        fzsn = hi33 * atoms.frr[3][n]
+        fxsn = sim_box.hi11 * atoms.frr[1][n] + sim_box.hi12 * atoms.frr[2][n] + \
+               sim_box.hi13 * atoms.frr[3][n]
+        fysn = sim_box.hi22 * atoms.frr[2][n] + sim_box.hi23 * atoms.frr[3][n]  # ! S - space !
+        fzsn = sim_box.hi33 * atoms.frr[3][n]
         atoms.x2[n] = dtsqhM * fxsn  # ! Taylor expansion in s - space: !
         atoms.y2[n] = dtsqhM * fysn  # ! vel = dt * dr / dt  !
         atoms.z2[n] = dtsqhM * fzsn
@@ -448,17 +441,18 @@ def initaccel():
 # -----------------------------------------------------------------------
 #
 
-def init_vel( T_set0):
+def init_vel(T_set0):
 
     #
     # *** assign initial velocities to atoms ***************************
     #
-    hi11 = sim_box.hi[1][1]
-    hi12 = sim_box.hi[1][2]
-    hi13 = sim_box.hi[1][3]
-    hi22 = sim_box.hi[2][2]
-    hi23 = sim_box.hi[2][3]
-    hi33 = sim_box.hi[3][3]
+
+    sim_box.hi11 = sim_box.hi[1][1]
+    sim_box.hi12 = sim_box.hi[1][2]
+    sim_box.hi13 = sim_box.hi[1][3]
+    sim_box.hi22 = sim_box.hi[2][2]
+    sim_box.hi23 = sim_box.hi[2][3]
+    sim_box.hi33 = sim_box.hi[3][3]
 
     tfc = 2.0 / (3.0 * constants.Boltz_Kb)
 
@@ -494,8 +488,7 @@ def init_vel( T_set0):
         atoms.y1[i] = yy / xyz
         atoms.z1[i] = zz / xyz
         atoms.sumPx[ntp] = atoms.sumPx[ntp] + Am * atoms.x1[i]
-        # ! in Real space !
-        atoms.sumPy[ntp] = atoms.sumPy[ntp] + Am * atoms.y1[i]
+        atoms.sumPy[ntp] = atoms.sumPy[ntp] + Am * atoms.y1[i]  # ! in Real space !
         atoms.sumPz[ntp] = atoms.sumPz[ntp] + Am * atoms.z1[i]
 
     tot_Px = 0.0
@@ -526,10 +519,8 @@ def init_vel( T_set0):
         vx = atoms.x1[i]
         vy = atoms.y1[i]  # ! R - space[A / ps] !
         vz = atoms.z1[i]
-        # ! New momentums !
-        atoms.sumPx[ntp] = atoms.sumPx[ntp] + Am * atoms.x1[i]
-        # ! in Real space !
-        atoms.sumPy[ntp] = atoms.sumPy[ntp] + Am * atoms.y1[i]
+        atoms.sumPx[ntp] = atoms.sumPx[ntp] + Am * atoms.x1[i]  # ! New momentums !
+        atoms.sumPy[ntp] = atoms.sumPy[ntp] + Am * atoms.y1[i]  # ! in Real space !
         atoms.sumPz[ntp] = atoms.sumPz[ntp] + Am * atoms.z1[i]
         pot_module.E_kin[ntp] = pot_module.E_kin[ntp] + Am * (vx * vx + vy * vy + vz * vz)
 
@@ -541,8 +532,7 @@ def init_vel( T_set0):
     for i in range(1, atoms.iatom_types + 1):
         na = pot_module.natoms_of_type[i]
         if na > 0:
-            # ! = 2 / 3 * Ek / Kb !
-            pot_module.pTemp[i] = 0.5 * tfc * pot_module.E_kin[i] / na
+            pot_module.pTemp[i] = 0.5 * tfc * pot_module.E_kin[i] / na  # ! = 2 / 3 * Ek / Kb !
             if pot_module.pTemp[i] > 0.001:
                 atoms.Tscale[i] = math.sqrt(T_set0 / pot_module.pTemp[i])
             else:
@@ -579,10 +569,9 @@ def init_vel( T_set0):
         # endif
         # 15 format('init_vel1: id:', i5, ' R x1=', 3E18.10)
 
-        atoms.x3[i] = (hi11 * atoms.x1[i] + hi12 * atoms.y1[i] + hi13 *
-                                   atoms.z1[i])
-        atoms.y3[i] = (hi22 * atoms.y1[i] + hi23 * atoms.z1[i])
-        atoms.z3[i] = hi33 * atoms.z1[i]
+        atoms.x3[i] = (sim_box.hi11 * atoms.x1[i] + sim_box.hi12 * atoms.y1[i] + sim_box.hi13 * atoms.z1[i])
+        atoms.y3[i] = (sim_box.hi22 * atoms.y1[i] + sim_box.hi23 * atoms.z1[i])
+        atoms.z3[i] = sim_box.hi33 * atoms.z1[i]
 
         atoms.x1[i] = atoms.x3[i] * atoms.dt_step
         atoms.y1[i] = atoms.y3[i] * atoms.dt_step
@@ -614,8 +603,8 @@ def init_vel( T_set0):
             sim_box.h4[i][j] = 0.0
             sim_box.h5[i][j] = 0.0
 
-    A_fr = 0.0  # ! Reset dissipated friction energy !
-    Q_heat = 0.0
+    atoms.A_fr = 0.0  # ! Reset dissipated friction energy !
+    atoms.Q_heat = 0.0
 
     get_T()  # ! calc.pTemp(ntp), E_kin(ntp), T_sys and Ek_sys !
 
@@ -628,10 +617,11 @@ def init_vel( T_set0):
 
 def init_MD():
 
-    global f02_atom,f12,f32,f42,f52,f02_wall,f02_atom,f02viscous
+    global f02,f02_atom,f12,f32,f42,f52,f02_wall,f02_atom,f02viscous
 
 
     # ! Fifth order predictor - corrector coefficients !
+
     f02 = 3.0 / 20.0  # ! in sim_box module !
     f02viscous = 3.0 / 16.0
     f12 = 251.0 / 360.0
@@ -639,8 +629,8 @@ def init_MD():
     f32 = 11.0 / 18.0
     f42 = 1.0 / 6.0
     f52 = 1.0 / 60.0
-    f02_wall = f02
-    f02_atom = f02
+    f02_wall = 3.0 / 20.0
+    f02_atom = 3.0 / 20.0
 
     return
     # ! End of init_MD !

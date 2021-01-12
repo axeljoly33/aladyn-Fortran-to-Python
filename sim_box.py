@@ -148,7 +148,7 @@ def argument( x, y, r):
     xr, yr, phi = 0.0, 0.0, 0.0
     PI = 3.141592654
 
-    r = math.sqrt(math.pow(x, 2) + math.pow(y, 2))
+    r = math.sqrt(pow(x, 2) + pow(y, 2))
     xr = abs(x) / r
     yr = abs(y) / r
 
@@ -182,7 +182,7 @@ def argument( x, y, r):
 # ! ********************************************************
 # !
 
-def ranmar( LEN):
+def ranmar(LEN):
 
     global U,I97,J97,C,buf,CD,CM
 
@@ -191,9 +191,9 @@ def ranmar( LEN):
     for IVEC in range(1, LEN + 1):
         UNI = U[I97] - U[J97]
         if UNI < 0.0:
-            UNI = UNI+1.0
+            UNI = UNI + 1.0
         U[I97] = UNI
-        I97 = I97-1
+        I97 = I97 - 1
         if I97 == 0:
             I97 = 97
         J97 = J97 - 1
@@ -204,8 +204,10 @@ def ranmar( LEN):
             C = C + CM
         UNI = UNI - C
         if UNI < 0.0:
-            UNI += 1.0
+            UNI = UNI + 1.0
         buf[IVEC] = UNI
+
+    # ! End of ranmar !
 
 # ! ********************************************************
 # !
@@ -224,11 +226,11 @@ def rmarin(IJKL):
 
     T = 0.0
 
-    IJ = IJKL / 30082
+    IJ = int(IJKL / 30082)
     KL = IJKL - IJ * 30082
-    I = ((IJ / 177) % 177) + 2
+    I = int(((IJ / 177) % 177) + 2)
     J = (IJ % 177) + 2
-    K = ((KL / 169) % 178) + 1
+    K = int(((KL / 169) % 178) + 1)
     L = (KL % 169)
 
     # ! WRITE(*, *) 'ranmar INITIALIZED: ', IJKL, I, J, K, L
@@ -245,24 +247,20 @@ def rmarin(IJKL):
                 S = S + T
             T = 0.5 * T
         U[II] = S
+
     C = 362436.0 / 16777216.0
     CD = 7654321.0 / 16777216.0
     CM = 16777213.0 / 16777216.0
     I97 = 97
     J97 = 33
 
+    # ! End of rmarin !
+
 # !
 # !----------------------------------------------------------------------
 # !
 
-def matinv( a, b):
-
-    # a = [ [0.0]*3 for i in range(3)]
-    # b = [ [0.0]*3 for i in range(3)]
-    # c = 0.0
-    print("a: ",a)
-    print("b: ",b)
-
+def matinv(a, b):
 
     d11 = a[2][2] * a[3][3] - a[2][3] * a[3][2]
     d22 = a[3][3] * a[1][1] - a[3][1] * a[1][3]
@@ -283,6 +281,8 @@ def matinv( a, b):
     b[2][1] = d12 / c
     b[3][2] = d23 / c
     b[1][3] = d31 / c
+
+    return c
 
 # !
 # ! ---------------------------------------------------------------------
@@ -310,30 +310,30 @@ def alloc_nodes(nodes):
 # ! ---------------------------------------------------------------------
 # !
 
-def alloc_buffers(ierror):
+def alloc_buffers():
 
     global buf,bufa,bufb,bufc,ibufY1,ibufY2,ibufZ1,ibufZ2
     global kbuf,kbufa,kbufb,kbufc,ncell_of_atom,nbufsize,natoms_alloc
 
-    ialloc = [0] * (14+1)
+    ialloc = [0] * (14 + 1)
 
     # ! if (mynod.eq.0) write(6, * )'alloc_buffers: nbufsize=', nbufsize
 
-    buf = [0] * (nbufsize+1)
-    bufa = [0] * (nbufsize+1)
-    bufb = [0] * (nbufsize+1)
-    bufc = [0] * (nbufsize+1)
+    buf = [0.0] * (nbufsize + 1)
+    bufa = [0.0] * (nbufsize + 1)
+    bufb = [0.0] * (nbufsize + 1)
+    bufc = [0.0] * (nbufsize + 1)
 
-    ibufY1 = [0] * (natoms_alloc+1)
-    ibufY2 = [0] * (natoms_alloc+1)
-    ibufZ1 = [0] * (natoms_alloc+1)
-    ibufZ2 = [0] * (natoms_alloc+1)
+    ibufY1 = [0] * (natoms_alloc + 1)
+    ibufY2 = [0] * (natoms_alloc + 1)
+    ibufZ1 = [0] * (natoms_alloc + 1)
+    ibufZ2 = [0] * (natoms_alloc + 1)
 
-    kbuf = [0] * (nbufsize+1)
-    kbufa = [0] * (nbufsize+1)
-    kbufb = [0] * (nbufsize+1)
-    kbufc = [0] * (nbufsize+1)
-    ncell_of_atom = [0] * (natoms_alloc+1)
+    kbuf = [0] * (nbufsize + 1)
+    kbufa = [0] * (nbufsize + 1)
+    kbufb = [0] * (nbufsize + 1)
+    kbufc = [0] * (nbufsize + 1)
+    ncell_of_atom = [0] * (natoms_alloc + 1)
 
     ierror = 0
     for i in range(1, 14 + 1):
@@ -393,17 +393,17 @@ def deall_buffers():
 # ! ---------------------------------------------------------------------
 # !
 
-def alloc_cells(ierror):
+def alloc_cells():
 
     global id_of_cell,natoms_in_cell,n_in_cell,n_of_moved_atom,ncell_per_node,natoms_per_cell
 
-    ialloc = [0] * (4+1)
+    ialloc = [0] * (4 + 1)
 
-    id_of_cell = [0] * (ncell_per_node+1)
-    natoms_in_cell = [0] * (ncell_per_node+1)
+    id_of_cell = [0] * (ncell_per_node + 1)
+    natoms_in_cell = [0] * (ncell_per_node + 1)
 
-    n_in_cell = [[0] * (natoms_per_cell+1) for i in range(ncell_per_node+1)]
-    n_of_moved_atom = [0] * (ncell_per_node+1)
+    n_in_cell = [[0] * (ncell_per_node + 1) for i in range(natoms_per_cell + 1)]
+    n_of_moved_atom = [0] * (ncell_per_node + 1)
 
     ierror = 0
     for i in range(1, 4 + 1):

@@ -346,7 +346,8 @@ def numb_elem_Z(chem):
 def get_chem():
 
     # ! *** Collect atom types...
-    natoms_of_type = [0]
+    for i in range(len(natoms_of_type)):
+        natoms_of_type[i]=0
 
     for n in range(1, sim_box.natoms + 1):
         ntp = atoms.ntype[n]
