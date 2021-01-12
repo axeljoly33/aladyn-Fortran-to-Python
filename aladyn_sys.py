@@ -1,6 +1,6 @@
 #
 # ------------------------------------------------------------------
-# 12-10-2020
+# 01-12-2021
 #
 # System Module Unit for the ParaGrandMC.f parallel Monte Carlo code.
 # Converted to Python.
@@ -76,7 +76,7 @@ def GET_NUM_PROCS():
     GET_NUM_PROCS = 1
 
     return GET_NUM_PROCS
-    # ! end function !
+    # ! End of GET_NUM_PROCS !
 
 #
 # ------------------------------------------------------------------
@@ -87,7 +87,7 @@ def GET_NUM_THREADS():
     GET_NUM_THREADS = 1
 
     return GET_NUM_THREADS
-    # ! end function !
+    # ! End of GET_NUM_THREADS !
 #
 # ------------------------------------------------------------------
 #
@@ -97,7 +97,7 @@ def GET_THREAD_NUM():
     GET_THREAD_NUM = 0
 
     return GET_THREAD_NUM
-    # ! end function !
+    # ! End of GET_THREAD_NUM !
 
 #
 # ------------------------------------------------------------------
@@ -108,7 +108,7 @@ def GET_WTIME():
     GET_WTIME = time.time()
 
     return GET_WTIME
-    # ! end function !
+    # ! End of GET_WTIME !
 
 #
 # ------------------------------------------------------------------
@@ -119,7 +119,7 @@ def GET_MAX_THREADS():
     GET_MAX_THREADS = 1
 
     return GET_MAX_THREADS
-    # ! end function !
+    # ! End of GET_MAX_THREADS !
 
 #
 # ------------------------------------------------------------------
@@ -130,14 +130,10 @@ def SET_NUM_THREADS(num_thrds):
     # integer, intent(in) :: num_thrds
 
     return
-    # ! end subroutine !
+    # ! End of SET_NUM_THREADS !
 
+# ---------------------------------------------------------------------
 #
-# ------------------------------------------------------------------
-#
-    # END MODULE ! sys_OMP !
+#      END FILE  ! aladyn_sys !
 #
 # =====================================================================
-# Overwrites some OpenACC functions when ACC is not available
-# ------------------------------------------------------------------
-#
