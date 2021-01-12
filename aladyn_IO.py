@@ -1,6 +1,6 @@
 #
 # ------------------------------------------------------------------
-# 12-10-2020
+# 01-12-2021
 #
 # Input - Output module subroutines for aladyn.f code.
 # Converted to Python.
@@ -64,23 +64,15 @@
 
 import sys
 import operator
-import numpy as np
-import random
-import torch
-import math
 import os
 
-#import aladyn_sys
 import atoms
 import sim_box
 import constants
 import pot_module
-import node_conf
-import group_conf
 import PROGRAM_END
-#import aladyn_MD
 import aladyn_ANN
-#import aladyn
+
 
 #
 # ------------------------------------------------------------------
@@ -91,10 +83,6 @@ import aladyn_ANN
 Lines_INI = 0
 Lines_Read = 0
 ndof_flag = 0
-
-##private :: subroutine fast_GET
-##private :: subroutine fast_PUT
-##private :: subroutine shell_P2P
 
 #
 # --------------------------------------------------------------------
@@ -170,10 +158,6 @@ def finder():
 #
 
 def alloc_atoms():
-
-    # use sys_OMP
-    # use sys_ACC
-    # use ANN
 
     print('ALLOCATE_ATOMS: ', sim_box.natoms_alloc)
 
@@ -281,8 +265,6 @@ def write_structure_plt():
 
 def read_pot_dat():
 
-    # use constants
-
     filename0 = ""
 
     ierror = 0
@@ -337,6 +319,7 @@ def read_pot_dat():
 #
 
 def structure_chem():
+
     ierror = 0
 
     # *** Collect atom types ...
@@ -630,8 +613,6 @@ def read_structure():
 
 def read_com():
 
-    #use constants
-
     LINE0 = ""
     LINE = ""
     LeadChar = ""
@@ -725,9 +706,11 @@ def read_Args():
 
     # ! End of read_Args !
 
-def link_cell_setup():
+#
+# ------------------------------------------------------------------
+#
 
-    # use sim_box
+def link_cell_setup():
 
     # !
     # ! subroutine to set up a cell structure in which to assign atoms
@@ -819,7 +802,7 @@ def link_cell_setup():
     # ! End of link_cell_setup !
 
 # !
-# !--------------------------------------------------------------------
+# ! -------------------------------------------------------------------
 # !
 # !
 # ! -------------------------------------------------------------------
@@ -829,8 +812,6 @@ def link_cell_setup():
 # !
 
 def nnd_fit(nodes_on_D, iD):
-
-    # use sim_box
 
     nnd_min = 3
     nnd_max = int(sim_box.h[iD][iD] / sim_box.size)
@@ -871,6 +852,7 @@ def nnd_fit(nodes_on_D, iD):
 
     return res
     # ! End of nnd_fit(nnn) !
+
 # !
 # ! -------------------------------------------------------------------
 # !  Looks for optimal node architecture configuration at a given
@@ -880,10 +862,9 @@ def nnd_fit(nodes_on_D, iD):
 
 def get_config(i1, i2, i3, nodes_X, nodes_Y, nodes_Z):
 
-    #use sim_box
-
     # !      write(50,10) i1,i2,i3, nodes_X, nodes_Y, nodes_Z
     # !  10  format('get_config(',6i3,')')
+
     nnx_min, nny_min, nnz_min = 0, 0, 0
 
     ierror = 0
@@ -926,6 +907,8 @@ def get_config(i1, i2, i3, nodes_X, nodes_Y, nodes_Z):
     res = [nnx_min, nny_min, nnz_min, nnx_cell, nny_cell, nnz_cell, ierror]
 
     return res
+    # ! End of get_config !
+
 # !
 # ! -------------------------------------------------------------------
 # !   Looks for optimal node architecture configuration
@@ -939,11 +922,6 @@ def node_config():
     # !        system in Y and Z directions, and
     # !   ***  looks for optimal node architecture configuration
     # !
-
-    #use sim_box
-    #use pot_module
-    #use IO
-    #use atoms
 
     natoms_alloc_new = 0  # ! local !
     nnx_min, nny_min, nnz_min = 0, 0, 0
@@ -1070,9 +1048,9 @@ def node_config():
 
     return nflag
     # ! End of node_config !
-#
+
 # ---------------------------------------------------------------------
 #
-#      END FILE  ! IO !
+#      END FILE  ! aladyn_IO !
 #
 # =====================================================================

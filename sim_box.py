@@ -1,13 +1,75 @@
-import sys
-import operator
-import numpy as np
-import random
-import torch
+#
+# ------------------------------------------------------------------
+# 01-12-2021
+#
+# Miolecular Dynamics sim_box functions for aladyn.f code.
+# Converted to Python.
+#
+# Yann Abou Jaoude - Axel Joly
+# Ecole Supérieure d'Ingénieurs Léonard-de-Vinci
+# 12 Avenue Léonard de Vinci,
+# Courbevoie, 92400, FRANCE
+# phone: (+33) 01 41 16 70 00
+# fax:
+# e-mail: yann.abou_jaoude@edu.devinci.fr - axel.joly@edu.devinci.fr
+# ------------------------------------------------------------------
+# 04-26-2019
+#
+# Miolecular Dynamics sim_box functions for aladyn.f code
+#
+# Vesselin Yamakov
+# National Institute of Aerospace
+# 100 Exploration Way,
+# Hampton, VA 23666
+# phone: (757)-864-2850
+# fax:   (757)-864-8911
+# e-mail: yamakov@nianet.org
+# ------------------------------------------------------------------
+#
+# Notices:
+# Copyright 2015, 2018, United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Disclaimers:
+# No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY
+# WARRANTY OF ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY,
+# INCLUDING, BUT NOT LIMITED TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE
+# WILL CONFORM TO SPECIFICATIONS, ANY IMPLIED WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR FREEDOM FROM
+# INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+# FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM
+# TO THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT,IN ANY MANNER,
+# CONSTITUTE AN ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT
+# OF ANY RESULTS, RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS
+# OR ANY OTHER APPLICATIONS RESULTING FROM USE OF THE SUBJECT SOFTWARE.
+# FURTHER, GOVERNMENT AGENCY DISCLAIMS ALL WARRANTIES AND LIABILITIES
+# REGARDING THIRD-PARTY SOFTWARE, IF PRESENT IN THE ORIGINAL SOFTWARE,
+# AND DISTRIBUTES IT "AS IS." 
+#
+# Waiver and Indemnity:
+# RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE UNITED STATES
+# GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY PRIOR
+# RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+# LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH
+# USE, INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM,
+# RECIPIENT'S USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND
+# HOLD HARMLESS THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND
+# SUBCONTRACTORS, AS WELL AS ANY PRIOR RECIPIENT, TO THE EXTENT
+# PERMITTED BY LAW. RECIPIENT'S SOLE REMEDY FOR ANY SUCH MATTER SHALL
+# BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS AGREEMENT.
+#
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#
+
 import math
 
-import node_conf
 import PROGRAM_END
 
+
+#
+# ------------------------------------------------------------------
+#
 
 # *** Set some working parameters here ***
 
@@ -142,9 +204,8 @@ I97, J97, I97s, J97s = 0, 0, 0, 0
 # ! ********************************************************
 # !
 
-def argument( x, y, r):
+def argument(x, y, r):
 
-    # x, y, r = 0.0, 0.0, 0.0
     xr, yr, phi = 0.0, 0.0, 0.0
     PI = 3.141592654
 
@@ -165,6 +226,7 @@ def argument( x, y, r):
         phi = 2.0 * PI - phi
 
     return phi
+    # ! End of argument !
 
 # !
 # ! ********************************************************
@@ -183,7 +245,6 @@ def argument( x, y, r):
 # !
 
 def ranmar(LEN):
-
     global U,I97,J97,C,buf,CD,CM
 
     UNI = 0.0
@@ -207,6 +268,7 @@ def ranmar(LEN):
             UNI = UNI + 1.0
         buf[IVEC] = UNI
 
+    return
     # ! End of ranmar !
 
 # ! ********************************************************
@@ -221,7 +283,6 @@ def ranmar(LEN):
 # ! ********************************************************
 
 def rmarin(IJKL):
-
     global U,C,CD,CM,I97,J97
 
     T = 0.0
@@ -254,6 +315,7 @@ def rmarin(IJKL):
     I97 = 97
     J97 = 33
 
+    return
     # ! End of rmarin !
 
 # !
@@ -283,13 +345,13 @@ def matinv(a, b):
     b[1][3] = d31 / c
 
     return c
+    # ! End of matinv !
 
 # !
 # ! ---------------------------------------------------------------------
 # !
 
 def alloc_nodes(nodes):
-
     global nbuf, nbufa
 
     ialloc = [0] * (2 + 1)
@@ -311,7 +373,6 @@ def alloc_nodes(nodes):
 # !
 
 def alloc_buffers():
-
     global buf,bufa,bufb,bufc,ibufY1,ibufY2,ibufZ1,ibufZ2
     global kbuf,kbufa,kbufb,kbufc,ncell_of_atom,nbufsize,natoms_alloc
 
@@ -347,7 +408,6 @@ def alloc_buffers():
 # !
 
 def deall_buffers():
-
     global buf,bufa,bufb,bufc,ibufY1,ibufY2,ibufZ1,ibufZ2
     global kbuf,kbufa,kbufb,kbufc,ncell_of_atom
 
@@ -394,7 +454,6 @@ def deall_buffers():
 # !
 
 def alloc_cells():
-
     global id_of_cell,natoms_in_cell,n_in_cell,n_of_moved_atom,ncell_per_node,natoms_per_cell
 
     ialloc = [0] * (4 + 1)
@@ -417,7 +476,6 @@ def alloc_cells():
 # !
 
 def deall_cells():
-
     global id_of_cell,natoms_in_cell,n_in_cell,n_of_moved_atom
 
     ialloc = [0] * (4 + 1)
@@ -443,7 +501,6 @@ def deall_cells():
 # !
 
 def error_check(ierror, message):
-
     global mynod
 
     if ierror != 0:
@@ -455,8 +512,8 @@ def error_check(ierror, message):
     return
     # ! End of error_check !
 
-# ! End of sim_box !
-
+# ---------------------------------------------------------------------
 #
-# ------------------------------------------------------------------
+#      END FILE  ! sim_box !
 #
+# =====================================================================

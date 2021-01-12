@@ -1,6 +1,6 @@
 #
 # ------------------------------------------------------------------
-# 12-10-2020
+# 01-12-2021
 #
 # aladyn code:
 #
@@ -95,12 +95,6 @@
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #
 
-import sys
-import operator
-import numpy as np
-import random
-import torch
-import math
 import time
 
 import PROGRAM_END
@@ -111,7 +105,6 @@ import sim_box
 import constants
 import pot_module
 import node_conf
-import group_conf
 import MD
 import aladyn_IO
 import aladyn_ANN
@@ -128,9 +121,6 @@ import aladyn_ANN
 # !
 
 def report(jstep):
-
-    # use pot_module
-    # use MD
 
     # !
     # ! *** temperature and energy
@@ -151,7 +141,6 @@ def report(jstep):
 # !
 
 def nodeRight_of(node):
-    # use sim_box
 
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
@@ -165,7 +154,6 @@ def nodeRight_of(node):
 # !
 
 def nodeLeft_of(node):
-    # use sim_box
 
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
@@ -180,7 +168,6 @@ def nodeLeft_of(node):
 # !
 
 def nodeDown_of(node):
-    # use sim_box
 
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
@@ -195,7 +182,6 @@ def nodeDown_of(node):
 # !
 
 def nodeUp_of(node):
-    # use sim_box
 
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
@@ -212,10 +198,6 @@ def nodeUp_of(node):
 # !
 
 def get_neighbors():
-
-    # use sim_box
-    # use atoms
-    # use pot_module
 
     ll_nbr = [0] * (sim_box.natoms_per_cell3 + 1)
 
@@ -338,15 +320,12 @@ def get_neighbors():
 # !
 
 def force_global(ilong):
+
     # !
     # ! ** *subroutine for doing force calculation with linked cells
     # !        ilong = (1) do full force calculation
     # !                (0) skip node_config and finder when
     # !                    sx() haven't changed, like in box rescaling
-
-    # use sim_box
-    # use pot_module
-    # use IO
 
     if ilong != 0:
         nflag = aladyn_IO.node_config()  # ! Update ncell, ncell_per_node, natoms_alloc
@@ -374,14 +353,6 @@ def force_global(ilong):
 # !
 
 def SIM_run():
-
-    # use constants
-    # use sim_box
-    # use pot_module
-    # use atoms
-    # use MD
-    # use IO
-    # use ANN
 
     MD.init_vel(sim_box.T_set)
     force_global(1)  # ! err.check node_config finder !
@@ -448,13 +419,6 @@ def SIM_run():
 # !
 
 def init_param():
-
-    # use constants
-    # use sim_box
-    # use atoms
-    # use pot_module
-    # use MD
-    # use IO
 
     seed_string = ""
 
@@ -550,10 +514,6 @@ def init_param():
 
 def read_pot():
 
-    # use pot_module
-    # use IO
-    # use ANN
-
     pot_module.init_elements()
 
     ierror = 0
@@ -580,13 +540,6 @@ def read_pot():
 
 def force(ienergy):
 
-    # use sys_OMP
-    # use sys_ACC
-    # use sim_box
-    # use pot_module
-    # use IO
-    # use ANN
-
     print('sim_box.I_have_GPU =', sim_box.I_have_GPU)
     print('pot_module.ecoh =', pot_module.ecoh)
 
@@ -607,11 +560,6 @@ def force(ienergy):
 # !
 
 def node_management():
-
-    # use sys_OMP
-    # use sys_ACC
-    # use sim_box
-    # use IO
 
     node_info = node_conf.node_conf()
 
@@ -642,10 +590,6 @@ def node_management():
 # !
 
 def report_node_config(node_info):
-
-    # use sys_OMP
-    # use sys_ACC  # ! defines devicetype !
-    # use sim_box
 
     sim_box.MP_procs = node_info.MP_procs
     sim_box.MP_threads = node_info.MP_threads
@@ -702,10 +646,6 @@ def report_node_config(node_info):
 
 def get_node_config(node_info):
 
-    # use sys_OMP
-    # use sys_ACC  # ! defines devicetype !
-    # use sim_box
-
     check_resources(node_info)
     node_info.node_name = 'my_node'
 
@@ -719,10 +659,6 @@ def get_node_config(node_info):
 # !
 
 def check_resources(node_info):
-
-    # use sys_OMP
-    # use sys_ACC
-    # use sim_box
 
     # ! Those are replacements of ACC_ * equivalents    !
     # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
@@ -768,12 +704,6 @@ def check_resources(node_info):
 
 def ParaGrandMC():
 
-    # use sys_OMP
-    # use sys_ACC
-    # use constants
-    # use sim_box
-    # use IO
-
     time_start_01 = time.time()
 
     sim_box.mynod = 0
@@ -806,3 +736,9 @@ def ParaGrandMC():
     # ! END OF MAIN PROGRAM !
 
 ParaGrandMC()
+
+# ---------------------------------------------------------------------
+#
+#      END FILE  ! aladyn !
+#
+# =====================================================================

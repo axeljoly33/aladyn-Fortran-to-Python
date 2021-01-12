@@ -1,9 +1,9 @@
 #
 # ------------------------------------------------------------------
-# 12-10-2020
+# 01-12-2021
 #
 # Artificial Neural Network module for aladyn.f code.
-# Open_MP version.
+# Open_MP & Open_ACC version.
 # Converted to Python.
 #
 # Yann Abou Jaoude - Axel Joly
@@ -66,35 +66,18 @@
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 
 
-import sys
-import operator
-import numpy as np
-import random
-import torch
 import math
 import time
 
-#import aladyn_sys
 import atoms
 import sim_box
-import constants
 import pot_module
-import node_conf
-import group_conf
-#import aladyn_MD
-#import aladyn_IO
-#import aladyn
 
 
 #
 # ------------------------------------------------------------------
 #
 
-# use sys_OMP #sys NO OMP / sys /sys ACC/sys omp
-# use constants
-# use sim_box
-# use pot_module
-# save
 ireport=0
 
 Max_net_layers = 8
@@ -169,9 +152,8 @@ dBOP_param_dxij_ = [[[[]]]]   # 4 dim , double
 
 
 # ! --- TEST arrays ---
-# !	 double precision, dimension(:,:), allocatable :: Gi_cp
 
-# u	  CONTAINS
+# !	 double precision, dimension(:,:), allocatable :: Gi_cp
 
 # !--------------------------------------------------------------------
 # ! This subroutine reads in data from files set in pot.dat file
@@ -466,8 +448,6 @@ def Frc_ANN_OMP():
     global r0Rc, r0pRc, U1f1, U2f1, U1f2, U2f2, U1f3, U2f3, Gi_dev, xr_ij0, xr_ij1, xr_ij2, xr_ij3, xr_ij_dev, fsij_dev, dfuN_dev
     global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
     global ireport
-
-    #use atoms
 
     time_initial = time.time()
     cpu_start = 0.0
@@ -842,8 +822,6 @@ def Frc_ANN_OMP():
 # ! ---------------------------------------------------------------------
 
 def Frc_ANN_ACC():
-    # u use sys_ACC
-    # u use atoms
     global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
     global net_layers, net_in, net_out, mG_dim, max_tri_index, Rc_ann, d_ann, d4_ann, Gauss_ann, range_min_ann
     global ActFunc_shift, Nodes_of_layer, r0_value, r0G_value, Gi_atom, dG_i, Gi_list, Gi_new
@@ -883,9 +861,7 @@ def Frc_ANN_ACC():
     if sim_box.ihalt != 0:
         return
 
-    """
-    write(6,*)'Frc_ANN_ACC: natoms=',natoms,' max_nbrs=',max_nbrs
-    """
+    # ! write(6,*)'Frc_ANN_ACC: natoms=',natoms,' max_nbrs=',max_nbrs
 
     max_ls = 1
     for i in range(2, net_layers - 1 + 1):
@@ -893,15 +869,14 @@ def Frc_ANN_ACC():
             max_ls = Nodes_of_layer[i]
 
     nBOP_params = Nodes_of_layer[net_layers]
-    """
-    ! Those are replacements of ACC_* equivalents	!
-    ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
-    """
 
-    # gpu My_GPU_free_mem = GET_GPU_FREE_MEM(My_GPU) / iMb  #! in Mbs !
-    """
-    !	 write(6,*)'1: My_GPU_free_mem=',My_GPU_free_mem
-    """
+    # ! Those are replacements of ACC_* equivalents	!
+    # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
+
+    # ! gpu My_GPU_free_mem = GET_GPU_FREE_MEM(My_GPU) / iMb  #! in Mbs !
+
+    # !	write(6,*)'1: My_GPU_free_mem=',My_GPU_free_mem
+
     memory1 = 4 * (2 * atoms.max_nbrs + n_set_ann * atoms.max_nbrs) + mG_dim + 3 * (
                 mG_dim + nBOP_params) * atoms.max_nbrs + max_ls * net_layers
     memory_request = memory1 * sim_box.natoms * 8
@@ -1013,11 +988,9 @@ def Frc_ANN_ACC():
     sim_box.h23 = sim_box.h[2][3]
     sim_box.h33 = sim_box.h[3][3]
 
-    """
-    !
-    ! --- Start I loop over ni atoms ---
-    !
-    """
+    # !
+    # ! --- Start I loop over ni atoms ---
+    # !
 
     for ni in range(1, sim_box.natoms + 1):  # loop over atoms
         for nb1 in range(1, atoms.max_nbrs + 1):  # Loop I: i - j bond
@@ -1069,11 +1042,11 @@ def Frc_ANN_ACC():
                 dfs_rij_3D[2][nb1][ni][n_set] = dfsij * xr_ij[2]  # ! dfs_ij*xij/rij !
                 dfs_rij_3D[3][nb1][ni][n_set] = dfsij * xr_ij[3]  # ! dfs_ij*xij/rij !
 
-    """
-    !
-    ! --- Start II loop over ni atoms ---
-    !
-    """
+
+    # !
+    # ! --- Start II loop over ni atoms ---
+    # !
+
     for ni in range(1, sim_box.natoms + 1):  # ! loop over atoms !
         for n_set in range(1, n_set_ann + 1):
             Gi_sum0 = 0.0
@@ -1104,18 +1077,18 @@ def Frc_ANN_ACC():
                     Gi_sum2 = Gi_sum2 + Pl2 * fsij_fsik
                     Gi_sum3 = Gi_sum3 + Pl4 * fsij_fsik
                     Gi_sum4 = Gi_sum4 + Pl6 * fsij_fsik
-            """
-            ! Calc. global G-vector !
-            """
+
+            # ! Calc. global G-vector !
+
             ind_set = n_set * 5 - 4
             Gi_dev[ind_set][ni] = Gi_sum0
             Gi_dev[ind_set + 1][ni] = Gi_sum1
             Gi_dev[ind_set + 2][ni] = Gi_sum2
             Gi_dev[ind_set + 3][ni] = Gi_sum3
             Gi_dev[ind_set + 4][ni] = Gi_sum4
-    """
-    ! --- Start III loop over ni atoms ---
-    """
+
+    # ! --- Start III loop over ni atoms --- !
+
     for ni in range(1, sim_box.natoms + 1):  # loop over atoms
         for nb1 in range(1, atoms.max_nbrs + 1):  # Loop I: i - j bond
             for n_set in range(1, n_set_ann + 1):
@@ -1157,9 +1130,7 @@ def Frc_ANN_ACC():
                     dcos_ijk[2] = [xr_ik[2] - xr_ij[2] * cos_ijk] * rij1
                     dcos_ijk[3] = [xr_ik[3] - xr_ij[3] * cos_ijk] * rij1
 
-                    """		   
-                    ! (xik/rik - xij/rij*cos_ijk) / rij  !
-                    """
+                    # ! (xik/rik - xij/rij*cos_ijk) / rij  !
 
                     Gi_sum0_x = Gi_sum0_x + fsik * dfs_rij_3D[1][nb1][ni][n_set]
                     Gi_sum0_y = Gi_sum0_y + fsik * dfs_rij_3D[2][nb1][ni][n_set]
@@ -1243,12 +1214,10 @@ def Frc_ANN_ACC():
             for icol in range(1, mG_dim + 1):
                 U1[icol] = Gi_dev[icol][ni]
 
-        """
-        ! --- Gis are done here for atom ni ---
-        ! --- Start NN on atom ni ---
+        # ! --- Gis are done here for atom ni ---
+        # ! --- Start NN on atom ni ---
 
-        ! -- Input Layer ---
-        """
+        # ! --- Input Layer --- !
 
         for iraw in range(1, Nodes_of_layer[2] + 1):  # ! 1.. 20 !
             U_vect = B1_ann[iraw]
@@ -1258,9 +1227,7 @@ def Frc_ANN_ACC():
             expU = math.exp(-U_vect)
             dfuN_dev[iraw][1][ni] = expU / (1.0 + expU) ** 2
 
-        """
-        !  -- Hidden Layers ---   
-        """
+        # ! --- Hidden Layers --- !
 
         for layer in range(2, net_layers - 2 + 1):
             NLcurr = Nodes_of_layer[layer]
@@ -1277,9 +1244,7 @@ def Frc_ANN_ACC():
                 expU = math.exp[-U_vect]
                 dfuN_dev[iraw][layer][ni] = expU / (1.0 + expU) ** 2
 
-        """
-        ! -- Output Layer ---	 
-        """
+        # ! --- Output Layer --- !
 
         for iraw in range(1, Nodes_of_layer[net_layers] + 1):  # ! 1.. 8 !
             U3_vect = B3_ann[iraw]
@@ -1287,20 +1252,17 @@ def Frc_ANN_ACC():
                 U3_vect = U3_vect + U2[icol] * W3_ann[icol][iraw]
 
         Ep_of[ni] = 2.0 * U3_vect
-        """
-        ! Twice the individual atomic energy  !
-        ! Devided by 2 later in MSR for	   !
-        ! compatibility with other potentials !
-        """
+
+        # ! Twice the individual atomic energy  !
+        # ! Devided by 2 later in MSR for	   !
+        # ! compatibility with other potentials !
 
     for ni in range(1, sim_box.natoms + 1):
         for nb1 in range(1, atoms.max_nbrs + 1):
 
-            """
-            ! --- DO ANN for each (i-j) pair using Gis as input vectors ---
+            # ! --- DO ANN for each (i-j) pair using Gis as input vectors --- !
 
-            ! -- Input Layer ---  
-            """
+            # ! --- Input Layer --- !
 
             for iraw in range(1, Nodes_of_layer[2] + 1):  # ! 1.. 20 !
                 U_x = 0.0
@@ -1314,9 +1276,8 @@ def Frc_ANN_ACC():
                 U2f[2][iraw] = U_y * dfuN_dev[iraw][1][ni]
                 U2f[3][iraw] = U_z * dfuN_dev[iraw][1][ni]
 
-            """
-            ! -- Hidden Layers --- 
-            """
+            # ! --- Hidden Layers ---
+
             for layer in range(2, net_layers - 2 + 1):
                 NLcurr = Nodes_of_layer[layer]
                 NLnext = Nodes_of_layer[layer + 1]
@@ -1340,9 +1301,7 @@ def Frc_ANN_ACC():
                     U2f[2][iraw] = U_y * dfuN_dev[iraw][layer][ni]
                     U2f[3][iraw] = U_z * dfuN_dev[iraw][layer][ni]
 
-            """
-            ! -- Output Layer ---
-            """
+            # ! --- Output Layer ---
 
             for iraw in range(1, Nodes_of_layer[net_layers] + 1):  # ! 1.. 1 !
 
@@ -1359,11 +1318,11 @@ def Frc_ANN_ACC():
                 dBOP_param_dxij_[2][iraw][nb1][ni] = U_y
                 dBOP_param_dxij_[3][iraw][nb1][ni] = U_z
 
-    """
-    ! --- End of ANN for each (i-j) pair using gij as input vectors ---
 
-    ! --- Calc Actual Force Vectors ---
-    """
+    # ! --- End of ANN for each (i-j) pair using gij as input vectors ---
+
+    # ! --- Calc Actual Force Vectors ---
+
     ecohe = 0.0
 
     for ni in range(1, sim_box.natoms + 1):  # ! loop over atoms !
@@ -1471,7 +1430,6 @@ def alloc_types_ANN():
 # !
 
 def deall_types_ANN():
-
     global W1_ann, W2_ann, W3_ann, B1_ann, B2_ann, B3_ann, r0_value, r0G_value, buf_ann
     global ireport
 
@@ -1505,13 +1463,9 @@ def deall_types_ANN():
     return ierror
     # ! End of deall_types_ANN !
 
-
-"""
-!
-! ---------------------------------------------------------------------
-!					! alloc_atoms_ANN !
-"""
-
+# !
+# ! ---------------------------------------------------------------------
+# !
 
 def alloc_atoms_ANN():
     global Max_net_layers, n_set_ann, net_atom_types, iflag_ann, net_layers, net_in, net_out, mG_dim, max_tri_index
@@ -1573,22 +1527,17 @@ def alloc_atoms_ANN():
         sim_box.ihalt = 1
 
     return ierror
-    # ! End of ! alloc_atoms_ANN !
+    # ! End of alloc_atoms_ANN !
 
-"""
-!
-! ---------------------------------------------------------------------
-!						! deall_atoms_ANN !
-"""
-
+# !
+# ! ---------------------------------------------------------------------
+# !
 
 def deall_atoms_ANN():
-
     global dBOP_param_dxi, Gi_atom, dG_i, Gi_list, U1, U2, Gi_new, xr_ij0, xr_ij1, xr_ij2, xr_ij3, fsij_dev
     global dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, Gi_dev, Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfuN_dev
     global U1f1, U2f1, dBOP_param_dxij_, r0Rc
     global ireport
-
 
     ialloc = [0] * (17 + 1)
 
@@ -1652,10 +1601,8 @@ def deall_atoms_ANN():
     return ierror
     # ! End of deall_atoms_ANN !
 
-"""
-! 
-! ------------------------------------------------------------------
-!
-"""
-
-# u END MODULE  ! BOP !
+# ---------------------------------------------------------------------
+#
+#      END FILE  ! aladyn_ANN !
+#
+# =====================================================================

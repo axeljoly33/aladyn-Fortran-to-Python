@@ -1,6 +1,6 @@
 #
 # ------------------------------------------------------------------
-# 12-10-2020
+# 01-12-2021
 #
 # Miolecular Dynamics Module Unit for aladyn.f code.
 # Converted to Python.
@@ -62,24 +62,12 @@
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #
 
-import sys
-import operator
-import numpy as np
-import random
-import torch
 import math
-import aladyn_sys
 
 import atoms
 import sim_box
 import constants
 import pot_module
-import node_conf
-import group_conf
-
-import aladyn_IO
-import aladyn_ANN
-#import aladyn
 
 
 #
@@ -102,8 +90,6 @@ f02_atom = 3.0 / 20.0
 #
 
 def correct_atoms(ndof_fl):
-
-    # integer, intent( in):: ndof_fl
 
     global f02_atom,f12,f32,f42,f52,f02_wall,f02_atom,f02viscous
 
@@ -616,9 +602,7 @@ def init_vel(T_set0):
 #
 
 def init_MD():
-
     global f02,f02_atom,f12,f32,f42,f52,f02_wall,f02_atom,f02viscous
-
 
     # ! Fifth order predictor - corrector coefficients !
 
@@ -635,7 +619,8 @@ def init_MD():
     return
     # ! End of init_MD !
 
+# ---------------------------------------------------------------------
 #
-# ------------------------------------------------------------------
+#      END FILE  ! MD !
 #
-# END MODULE ! MD !
+# =====================================================================
