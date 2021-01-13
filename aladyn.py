@@ -392,7 +392,7 @@ def SIM_run():
 
         # ! --- MD step end ---
 
-        if ((kstep % sim_box.measure_step) == 0) and (kstep < sim_box.nstep):
+        if ((kstep % sim_box.measure_step) == 0) and (kstep < sim_box.nstep + 1):
             force_global(0)
             report(kstep)
 
@@ -539,9 +539,6 @@ def read_pot():
 # !
 
 def force(ienergy):
-
-    print('sim_box.I_have_GPU =', sim_box.I_have_GPU)
-    print('pot_module.ecoh =', pot_module.ecoh)
 
     if sim_box.I_have_GPU > 0:
         pot_module.ecoh = aladyn_ANN.Frc_ANN_ACC()  # ! Analytical derivatives !

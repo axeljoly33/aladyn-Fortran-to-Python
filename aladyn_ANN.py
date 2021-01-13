@@ -449,7 +449,6 @@ def Frc_ANN_OMP():
     global Gi_3D_dev1, Gi_3D_dev2, Gi_3D_dev3, dfs_rij_3D1, dfs_rij_3D2, dfs_rij_3D3, dfs_rij_3D, Gi_3D_dev, dBOP_param_dxij_
     global ireport
 
-    time_initial = time.time()
     cpu_start = 0.0
     time_Gi = 0.0
     time_Gi_total = 0.0
@@ -810,9 +809,6 @@ def Frc_ANN_OMP():
             atoms.frr[i][ni] = fr[i]
 
         ecohe = ecohe + 0.50 * atoms.Ep_of[ni]
-
-    time_final = time.time()
-    print('Delta time =', time_final - time_initial, ' s (of each Frc_ANN_OMP call')
 
     return ecohe
     # ! End of Frc_ANN_OMP !
