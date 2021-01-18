@@ -193,7 +193,7 @@ def alloc_atoms():
 def write_structure_plt():
 
     fname = ""
-    ffname = ""
+    #ffname = ""
     h_out = [[0.0] * (3 + 1) for i in range(3 + 1)]
 
     isize = 7
@@ -204,11 +204,12 @@ def write_structure_plt():
     fname = 'structure.{0:8d}.plt'.format(itime)
     fname = fname.replace(" ", "0")
 
-    ffname = sim_box.file_path + fname
+    #ffname = sim_box.file_path + fname
     if os.path.exists(fname):
+        print("The file", fname ,"already exist and will be replaced.")
         os.remove(fname)
-    else:
-        print("The file does not exist")
+
+
     f = open(fname, "x")
 
     xtmx = sim_box.h[1][1] * 0.5  # ! half the size in X in [Ang.] !
@@ -219,24 +220,23 @@ def write_structure_plt():
     ztmn = -ztmx
 
     line = ""
-    line = '#' + ' ' + str(xtmn) + ' ' + str(ytmn) + ' ' + str(ztmn)
+    line = '#' + ' ' + str(xtmn) + ' ' + str(ytmn) + ' ' + str(ztmn)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(xtmx) + ' ' + str(ytmx) + ' ' + str(ztmx)
+    line = '#' + ' ' + str(xtmx) + ' ' + str(ytmx) + ' ' + str(ztmx)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(xtmn) + ' ' + str(ytmn) + ' ' + str(ztmn)
+    line = '#' + ' ' + str(xtmn) + ' ' + str(ytmn) + ' ' + str(ztmn)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(xtmx) + ' ' + str(ytmx) + ' ' + str(ztmx)
+    line = '#' + ' ' + str(xtmx) + ' ' + str(ytmx) + ' ' + str(ztmx)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(sim_box.nbas) + ' ' + str(sim_box.natoms) + ' ' + str(sim_box.natoms_buf) + ' ' + \
-           str(sim_box.natoms_free)
+    line = '#' + ' ' + str(sim_box.nbas) + ' ' + str(sim_box.natoms) + ' ' + str(sim_box.natoms_buf) + ' ' + str(sim_box.natoms_free)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(sim_box.r_plt) + ' ' + str(sim_box.mdx) + ' ' + str(sim_box.mdy) + ' ' + str(sim_box.mdz)
+    line = '#' + ' ' + str(sim_box.r_plt) + ' ' + str(sim_box.mdx) + ' ' + str(sim_box.mdy) + ' ' + str(sim_box.mdz)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(sim_box.ibcx) + ' ' + str(sim_box.ibcy) + ' ' + str(sim_box.ibcz)
+    line = '#' + ' ' + str(sim_box.ibcx) + ' ' + str(sim_box.ibcy) + ' ' + str(sim_box.ibcz)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(sim_box.ipo) + ' ' + str(sim_box.ipl)
+    line = '#' + ' ' + str(sim_box.ipo) + ' ' + str(sim_box.ipl)+'\n'
     f.write(line)
-    line = '#' + ' ' + str(pot_module.PotEnrg_atm) + '  ' + str(sim_box.T_sys)
+    line = '#' + ' ' + str(pot_module.PotEnrg_atm) + '  ' + str(sim_box.T_sys)+'\n'
     f.write(line)
 
     for kk in range(1, sim_box.natoms + 1):
@@ -245,7 +245,7 @@ def write_structure_plt():
         Cz = sim_box.h[3][3] * atoms.sz[kk]
 
         ntp = atoms.ntype[kk]  # ! write type as in pot.dat file !
-        line = str(atoms.ident[kk]) + ' ' + str(Cx) + ' ' + str(Cy) + ' ' + str(Cz) + ' ' + str(ntp) + ' ' + str(0)
+        line = str(atoms.ident[kk]) + ' ' + str(Cx) + ' ' + str(Cy) + ' ' + str(Cz) + ' ' + str(ntp) + ' ' + str(0)+'\n'
         f.write(line)
 
     # ! do kk = 1, natoms !
@@ -254,6 +254,13 @@ def write_structure_plt():
     f.write(line)
 
     f.close()
+
+
+    if  os.path.exists(fname):
+        print( fname," has been created successfully")
+
+    else:
+        print("Error while creating the file ", fname)
 
     # ! End of write_structure_plt !
 
@@ -338,7 +345,7 @@ def structure_chem():
     if ierror != 0:
         PROGRAM_END.PROGRAM_END(1)
 
-    print('\nncell_per_node=', sim_box.ncell_per_node, 'ncell=', sim_box.ncell, 'cell_volume=', sim_box.cell_volume,
+    print('\nncell_per_node=', sim_box.ncell_per_node, 'ncell=', sim_box.ncell, 'cell_volume=', round(sim_box.cell_volume,2),
           ' [Ang^3];')
     print('    Atoms allocated per node:', sim_box.natoms_alloc)
     print('    Atoms allocated per cell:', sim_box.natoms_per_cell)
@@ -685,17 +692,17 @@ def read_Args():
         if (str_opt == '-v') or (str_opt == '-V'):
             str_num = GETARG[k]
             k += 1
-            iver = str_num
+            iver = float(str_num)
             print('- Version ', iver)
         elif (str_opt == '-n') or (str_opt == '-N'):
             str_num = GETARG[k]
             k += 1
-            sim_box.nstep = str_num
+            sim_box.nstep = int(str_num)
             print('- Executing ', sim_box.nstep, ' MD steps')
         elif (str_opt == '-m') or (str_opt == '-M'):
             str_num = GETARG[k]
             k += 1
-            sim_box.measure_step = str_num
+            sim_box.measure_step = int(str_num)
             print('- Measure at each ', sim_box.measure_step, ' MD steps')
         # ! if((str_opt(1:2)... !
 

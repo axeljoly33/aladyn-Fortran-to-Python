@@ -130,8 +130,8 @@ def report(jstep):
     MD.get_T()
     etott = epot + sim_box.Ek_sys
 
-    print(jstep, ', t=', sim_box.real_time, 'ps, Ep=', epot, '+ Ek=', sim_box.Ek_sys,
-          '= Etot=', etott, 'eV/atom, Tsys=', sim_box.T_sys, 'K')
+    print(jstep, ', t=', "%.2f" %sim_box.real_time, 'ps, Ep=', round(epot,8), '+ Ek=', round(sim_box.Ek_sys,8),
+          '= Etot=', round(etott,8), 'eV/atom, Tsys=', round(sim_box.T_sys,2), 'K')
 
     return
     # ! End of report !
