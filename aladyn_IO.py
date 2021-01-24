@@ -159,6 +159,8 @@ def finder():
 
 def alloc_atoms():
 
+    # A function allocating memory to atoms related variables
+
     print('ALLOCATE_ATOMS: ', sim_box.natoms_alloc)
 
     ierr_acc = 0
@@ -191,6 +193,8 @@ def alloc_atoms():
 #
 
 def write_structure_plt():
+
+    # A function which write the structure.plt output file at the end of the runtime
 
     fname = ""
     #ffname = ""
@@ -272,6 +276,8 @@ def write_structure_plt():
 
 def read_pot_dat():
 
+    # This function reads the ANN.dat file and collect the information
+
     filename0 = ""
 
     ierror = 0
@@ -327,6 +333,8 @@ def read_pot_dat():
 
 def structure_chem():
 
+    # A function managing thechemical structure which will be used for simulation
+
     ierror = 0
 
     # *** Collect atom types ...
@@ -362,6 +370,9 @@ def structure_chem():
 #
 
 def read_structure_plt():
+
+    # This functions reads the structure.plt input file and collect its information
+
     global ndof_flag
 
     file_in = ""
@@ -583,6 +594,8 @@ def read_structure_plt():
 
 def read_structure():
 
+    # A function used to manage information of the structure.plt file and prepare them for simulation
+
     if pot_module.INP_STR_TYPE:
         read_structure_plt()  # ! plt type !
 
@@ -619,6 +632,8 @@ def read_structure():
 #
 
 def read_com():
+
+    # This function initializes some useful variables
 
     LINE0 = ""
     LINE = ""
@@ -666,6 +681,8 @@ def read_com():
 #
 
 def read_Args():
+
+    # A function which collect the arguments given by the user with the python interpreter
 
     N_args = 0
 
@@ -719,9 +736,7 @@ def read_Args():
 
 def link_cell_setup():
 
-    # !
-    # ! subroutine to set up a cell structure in which to assign atoms
-    # !
+    # A function to set up a cell structure in which to assign atoms
 
     ncell_per_node_old = sim_box.ncell_per_node
 

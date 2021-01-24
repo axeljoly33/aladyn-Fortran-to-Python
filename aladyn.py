@@ -122,6 +122,8 @@ import aladyn_ANN
 
 def report(jstep):
 
+    # A function used to report the current energies and the temperature of the simulation
+
     # !
     # ! *** temperature and energy
     # !
@@ -142,6 +144,8 @@ def report(jstep):
 
 def nodeRight_of(node):
 
+    # This function is legacy. Not used by the Python program
+
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
     nodeRight_of =  node_Z * sim_box.nodes_on_Y + ((node_Y + 1) % sim_box.nodes_on_Y)
@@ -154,6 +158,8 @@ def nodeRight_of(node):
 # !
 
 def nodeLeft_of(node):
+
+    # This function is legacy. Not used by the Python program
 
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
@@ -169,6 +175,8 @@ def nodeLeft_of(node):
 
 def nodeDown_of(node):
 
+    # This function is legacy. Not used by the Python program
+
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
     nodeDown_of = ((node_Z - 1 + sim_box.nodes_on_Z) % sim_box.nodes_on_Z) * \
@@ -182,6 +190,8 @@ def nodeDown_of(node):
 # !
 
 def nodeUp_of(node):
+
+    # This function is legacy. Not used by the Python program
 
     node_Z = node / sim_box.nodes_on_Y
     node_Y = node % sim_box.nodes_on_Y
@@ -198,6 +208,8 @@ def nodeUp_of(node):
 # !
 
 def get_neighbors():
+
+    # This function runs through all the neighbors of an atom
 
     ll_nbr = [0] * (sim_box.natoms_per_cell3 + 1)
 
@@ -321,6 +333,8 @@ def get_neighbors():
 
 def force_global(ilong):
 
+    # This function compute force with the proximate atoms
+
     # !
     # ! ** *subroutine for doing force calculation with linked cells
     # !        ilong = (1) do full force calculation
@@ -353,6 +367,8 @@ def force_global(ilong):
 # !
 
 def SIM_run():
+
+    # This function runs the simulation N times, N being informed with arguments to the interpeter
 
     MD.init_vel(sim_box.T_set)
     force_global(1)  # ! err.check node_config finder !
@@ -419,6 +435,8 @@ def SIM_run():
 # !
 
 def init_param():
+
+    # This function initialize variables for the incoming simulation loop
 
     seed_string = ""
 
@@ -514,6 +532,8 @@ def init_param():
 
 def read_pot():
 
+    # This function manage the making ofthe ANN with the ANN.dat input file
+
     pot_module.init_elements()
 
     ierror = 0
@@ -540,6 +560,9 @@ def read_pot():
 
 def force(ienergy):
 
+    # A function calling ANN function which computes forces, energies and temperatures for the simulation
+    # and the ANN
+
     if sim_box.I_have_GPU > 0:
         pot_module.ecoh = aladyn_ANN.Frc_ANN_ACC()  # ! Analytical derivatives !
     else:
@@ -557,6 +580,8 @@ def force(ienergy):
 # !
 
 def node_management():
+
+    # A function which manage the node structure
 
     node_info = node_conf.node_conf()
 
@@ -587,6 +612,8 @@ def node_management():
 # !
 
 def report_node_config(node_info):
+
+    # The function gathers information from the computer used and display them
 
     sim_box.MP_procs = node_info.MP_procs
     sim_box.MP_threads = node_info.MP_threads
@@ -643,6 +670,8 @@ def report_node_config(node_info):
 
 def get_node_config(node_info):
 
+    # A function which harvests the computer information
+
     check_resources(node_info)
     node_info.node_name = 'my_node'
 
@@ -656,6 +685,8 @@ def get_node_config(node_info):
 # !
 
 def check_resources(node_info):
+
+    # A function which harvests the computer information
 
     # ! Those are replacements of ACC_ * equivalents    !
     # ! redefined in pgmc_sys_ACC.f and pgmc_sys_OMP.f !
@@ -700,6 +731,8 @@ def check_resources(node_info):
 # !
 
 def ParaGrandMC():
+
+    # The main function
 
     time_start_01 = time.time()
 
